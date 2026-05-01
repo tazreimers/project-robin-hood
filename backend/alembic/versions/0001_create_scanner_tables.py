@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("name"),
+        sa.UniqueConstraint("api_key_name", name="uq_bookmakers_api_key_name"),
     )
     op.create_index("ix_bookmakers_region", "bookmakers", ["region"], unique=False)
 

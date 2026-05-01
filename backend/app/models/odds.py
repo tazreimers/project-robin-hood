@@ -19,9 +19,10 @@ class TimestampMixin(CreatedAtMixin):
 
 class Bookmaker(CreatedAtMixin, Base):
     __tablename__ = "bookmakers"
+    __table_args__ = (UniqueConstraint("api_key_name", name="uq_bookmakers_api_key_name"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
     region: Mapped[str] = mapped_column(String(32), index=True)
     api_key_name: Mapped[str] = mapped_column(String(128))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")

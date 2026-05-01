@@ -7,6 +7,8 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/arbitrage
       REDIS_URL: redis://redis:6379/0
       ODDS_API_KEY: ${ODDS_API_KEY:-}
+      SPORT_KEYS: ${SPORT_KEYS:-afl,nrl}
+      ODDS_REGIONS: ${ODDS_REGIONS:-au}
       CORS_ORIGINS: '["http://localhost:3000"]'
     volumes:
       - ./backend:/app
@@ -26,6 +28,8 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/arbitrage
       REDIS_URL: redis://redis:6379/0
       ODDS_API_KEY: ${ODDS_API_KEY:-}
+      SPORT_KEYS: ${SPORT_KEYS:-afl,nrl}
+      ODDS_REGIONS: ${ODDS_REGIONS:-au}
     volumes:
       - ./backend:/app
     depends_on:

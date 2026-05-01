@@ -1,0 +1,51 @@
+Implement odds ingestion for the MVP using an external odds API.
+
+Create a service:
+backend/app/services/odds_ingestion.py
+
+The service should:
+- fetch sports
+- fetch upcoming events
+- fetch odds for selected sports
+- store bookmakers, sports, events, markets, outcomes, and odds snapshots
+- normalize decimal odds
+- ignore live markets for now
+- ignore suspended markets where the source provides that information
+- support only head-to-head / moneyline markets first
+
+Use an adapter pattern so more providers can be added later.
+
+Create:
+backend/app/services/providers/base.py
+backend/app/services/providers/the_odds_api.py
+
+The base provider should define:
+- fetch_sports()
+- fetch_odds(sport_key: str)
+
+The Odds API provider should read ODDS_API_KEY from config.
+
+Create a Celery job:
+backend/app/jobs/fetch_odds.py
+
+The job should:
+- fetch odds for configured sport keys
+- store the data
+- log how many events, markets, outcomes, and snapshots were saved
+
+Add API endpoint:
+POST /jobs/fetch-odds
+
+This endpoint should trigger the Celery job manually.
+
+Add config variable:
+SPORT_KEYS
+
+Example:
+SPORT_KEYS=afl,nrl
+
+Add README instructions showing how to:
+- set ODDS_API_KEY
+- run docker compose
+- trigger a scrape with POST /jobs/fetch-odds
+- inspect stored events and odds

@@ -1,4 +1,5 @@
 from app.config import get_settings
+from app.jobs.fetch_odds import fetch_odds
 from app.jobs.celery_app import celery_app
 
 
@@ -8,4 +9,5 @@ def scan_odds() -> dict[str, str]:
     if not settings.odds_api_key:
         return {"status": "skipped", "reason": "ODDS_API_KEY is not configured"}
 
-    return {"status": "queued", "reason": "odds provider integration is not implemented yet"}
+    result = fetch_odds.delay()
+    return {"status": "queued", "task_id": result.id}

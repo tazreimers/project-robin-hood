@@ -35,9 +35,13 @@ Available variables:
 DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/arbitrage
 REDIS_URL=redis://redis:6379/0
 ODDS_API_KEY=
+SPORT_KEYS=afl,nrl
+ODDS_REGIONS=au
 ```
 
-`ODDS_API_KEY` is optional for bootstrapping. The scan job currently returns a skipped result when it is not configured.
+`ODDS_API_KEY` is optional for bootstrapping. Odds ingestion returns a skipped result when it is not configured.
+
+The current provider is The Odds API v4: `https://the-odds-api.com/liveapi/guides/v4/`. `SPORT_KEYS` accepts The Odds API sport keys. For convenience, the MVP maps `afl` to `aussierules_afl` and `nrl` to `rugbyleague_nrl`.
 
 ## Run Locally
 
@@ -67,6 +71,42 @@ GET /sports
 GET /events
 GET /opportunities
 GET /opportunities/{id}
+POST /jobs/fetch-odds
+```
+
+## Odds Ingestion
+
+Set your odds API key in `.env`:
+
+```bash
+ODDS_API_KEY=your_api_key_here
+SPORT_KEYS=afl,nrl
+ODDS_REGIONS=au
+```
+
+Start the stack:
+
+```bash
+docker compose up --build
+```
+
+Trigger a manual scrape:
+
+```bash
+curl -X POST http://localhost:8000/jobs/fetch-odds
+```
+
+Inspect stored events through the API:
+
+```bash
+curl http://localhost:8000/events
+```
+
+Inspect stored markets, outcomes, and snapshots in Postgres:
+
+```bash
+docker compose exec postgres psql -U postgres -d arbitrage -c "select e.start_time, e.home_team, e.away_team, m.market_type, b.name as bookmaker, o.outcome_name, o.decimal_odds from events e join markets m on m.event_id = e.id join bookmakers b on b.id = m.bookmaker_id join outcomes o on o.market_id = m.id order by e.start_time, b.name;"
+docker compose exec postgres psql -U postgres -d arbitrage -c "select captured_at, market_type, outcome_name, decimal_odds from odds_snapshots order by captured_at desc limit 20;"
 ```
 
 ## Database Migrations

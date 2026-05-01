@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
+from app.jobs.fetch_odds import fetch_odds as fetch_odds_job
 from app.models import ArbitrageOpportunity, Bookmaker, Event, Sport
 from app.schemas.health import HealthResponse
 from app.schemas.odds import ArbitrageOpportunityRead, BookmakerRead, EventRead, SportRead
@@ -53,3 +54,9 @@ def get_opportunity(opportunity_id: int, db: Session = Depends(get_db)) -> Arbit
         raise HTTPException(status_code=404, detail="Opportunity not found")
 
     return opportunity
+
+
+@router.post("/jobs/fetch-odds", status_code=202)
+def enqueue_fetch_odds() -> dict[str, str]:
+    task = fetch_odds_job.delay()
+    return {"status": "queued", "task_id": task.id}
