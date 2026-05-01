@@ -1,0 +1,46 @@
+Create a new full-stack arbitrage betting scanner MVP.
+
+Use:
+- Backend: Python FastAPI
+- Database: Postgres
+- ORM: SQLAlchemy
+- Migrations: Alembic
+- Job runner: Celery
+- Cache/queue: Redis
+- Frontend: Next.js
+- Docker Compose for local development
+
+Create the following services:
+- api
+- worker
+- redis
+- postgres
+- frontend
+
+Create a clean folder structure:
+backend/
+  app/
+    main.py
+    config.py
+    db.py
+    models/
+    schemas/
+    services/
+    jobs/
+    api/
+  alembic/
+frontend/
+docker-compose.yml
+README.md
+
+The backend should expose:
+GET /health
+
+The frontend should have a simple homepage that calls /health and displays API status.
+
+Add environment variable support for:
+DATABASE_URL
+REDIS_URL
+ODDS_API_KEY
+
+Include setup instructions in README.md.
