@@ -1,137 +1,163 @@
 "use client";
 
-import Link from "next/link";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-type EventRead = {
-  id: number;
-  home_team: string;
-  away_team: string;
-  start_time: string;
-};
-
-type ActiveArbitrageOpportunity = {
-  id: number;
-  event: EventRead;
-  market_type: string;
-  margin: string;
-  guaranteed_profit: string;
-  freshness_status: string;
-};
-
-type ResourceState<T> = {
-  data: T;
-  error: string | null;
-  loading: boolean;
-};
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`API returned ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function formatMoney(value: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "AUD",
-    maximumFractionDigits: 2,
-  }).format(Number(value));
-}
-
-function formatPercent(value: string) {
-  return `${(Number(value) * 100).toFixed(2)}%`;
-}
+import {
+  type ActiveArbitrageOpportunity,
+  formatDateTime,
+  formatMoney,
+  formatPercent,
+  getActiveOpportunities,
+} from "../../lib/api";
 
 export default function OpportunitiesPage() {
-  const [opportunitiesState, setOpportunitiesState] = useState<ResourceState<ActiveArbitrageOpportunity[]>>({
-    data: [],
-    error: null,
-    loading: true,
-  });
+  const router = useRouter();
+  const [opportunities, setOpportunities] = useState<ActiveArbitrageOpportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadOpportunities = useCallback(async () => {
-    setOpportunitiesState((current) => ({ ...current, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
 
     try {
-      const opportunities = await fetchJson<ActiveArbitrageOpportunity[]>("/opportunities/active");
-      setOpportunitiesState({ data: opportunities, error: null, loading: false });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to load opportunities";
-      setOpportunitiesState({ data: [], error: message, loading: false });
+      setOpportunities(await getActiveOpportunities());
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load opportunities");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void loadOpportunities();
+    const interval = window.setInterval(() => {
+      void loadOpportunities();
+    }, 30000);
+
+    return () => window.clearInterval(interval);
   }, [loadOpportunities]);
 
   return (
-    <main className="page">
-      <div className="shell">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Project Robin Hood</p>
-            <h1>Opportunities</h1>
-          </div>
-          <Link className="linkButton" href="/">
-            Dashboard
-          </Link>
-        </header>
+    <Stack spacing={3}>
+      <Box>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          Opportunities
+        </Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+          Active arbitrage opportunities refresh every 30 seconds.
+        </Typography>
+      </Box>
 
-        <section className="panel" aria-labelledby="opportunities-heading">
-          <div className="panelHeader">
-            <h2 id="opportunities-heading">Active opportunities</h2>
-            <button
-              className="refreshButton"
-              type="button"
-              onClick={loadOpportunities}
-              disabled={opportunitiesState.loading}
-            >
-              Refresh
-            </button>
-          </div>
-          <div className="table">
-            {opportunitiesState.error ? <p className="notice error">{opportunitiesState.error}</p> : null}
-            {!opportunitiesState.error && opportunitiesState.loading ? (
-              <p className="notice">Loading opportunities.</p>
-            ) : null}
-            {!opportunitiesState.error && !opportunitiesState.loading && opportunitiesState.data.length === 0 ? (
-              <p className="notice">No active opportunities detected.</p>
-            ) : null}
-            {opportunitiesState.data.map((opportunity) => (
-              <div className="dataRow opportunityListRow" key={opportunity.id}>
-                <div className="primaryCell">
-                  <span>
+      {error ? <Alert severity="error">{error}</Alert> : null}
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Event</TableCell>
+              <TableCell>Market</TableCell>
+              <TableCell>Margin</TableCell>
+              <TableCell>Guaranteed Profit</TableCell>
+              <TableCell>Start Time</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell align="right">Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <Stack sx={{ alignItems: "center", py: 4 }}>
+                    <CircularProgress />
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ) : opportunities.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <Typography color="text.secondary" sx={{ py: 2 }}>
+                    No active opportunities detected.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              opportunities.map((opportunity) => (
+                <TableRow
+                  hover
+                  key={opportunity.id}
+                  onClick={() => router.push(`/opportunities/${opportunity.id}`)}
+                  sx={{ cursor: "pointer" }}
+                >
+                  <TableCell>
                     {opportunity.event.home_team} vs {opportunity.event.away_team}
-                  </span>
-                  <span className="mutedText">
-                    {opportunity.market_type} - {formatDateTime(opportunity.event.start_time)}
-                  </span>
-                </div>
-                <span>{formatPercent(opportunity.margin)}</span>
-                <span>{formatMoney(opportunity.guaranteed_profit)}</span>
-                <span>{opportunity.freshness_status}</span>
-                <Link className="linkButton" href={`/opportunities/${opportunity.id}`}>
-                  Details
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </main>
+                  </TableCell>
+                  <TableCell>{opportunity.market_type}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={formatPercent(opportunity.margin)}
+                      color={marginColor(Number(opportunity.margin))}
+                    />
+                  </TableCell>
+                  <TableCell>{formatMoney(opportunity.guaranteed_profit)}</TableCell>
+                  <TableCell>{formatDateTime(opportunity.event.start_time)}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={opportunity.freshness_status}
+                      color={opportunity.freshness_status === "fresh" ? "success" : "warning"}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<VisibilityIcon />}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        router.push(`/opportunities/${opportunity.id}`);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Stack>
   );
+}
+
+function marginColor(margin: number): "success" | "warning" | "error" {
+  if (margin > 0.03) {
+    return "success";
+  }
+
+  if (margin >= 0.01) {
+    return "warning";
+  }
+
+  return "error";
 }

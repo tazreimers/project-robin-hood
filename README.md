@@ -228,3 +228,16 @@ cd frontend
 npm install
 npm run dev
 ```
+
+The frontend uses Material UI. If you are adding dependencies from a fresh checkout, install the MUI packages with:
+
+```bash
+cd frontend
+npm install @mui/material @mui/icons-material @emotion/react @emotion/styled
+```
+
+The local frontend runs at:
+
+```text
+http://localhost:3000
+```
