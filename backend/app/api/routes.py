@@ -9,8 +9,9 @@ from app.db import get_db
 from app.jobs.celery_app import celery_app
 from app.jobs.detect_arbitrage import detect_arbitrage as detect_arbitrage_job
 from app.jobs.fetch_odds import fetch_odds as fetch_odds_job
+from app.jobs.scan_now import scan_now as scan_now_job
 from app.logging_utils import redact_secrets
-from app.models import ArbitrageLeg, ArbitrageOpportunity, Bookmaker, Event, OddsSnapshot, Sport
+from app.models import ArbitrageLeg, ArbitrageOpportunity, Bookmaker, Event, OddsSnapshot, ScanRun, Sport
 from app.schemas.health import HealthResponse
 from app.schemas.jobs import JobStatusRead
 from app.schemas.odds import (
@@ -21,8 +22,10 @@ from app.schemas.odds import (
     EventRead,
     SportRead,
 )
+from app.schemas.scanner import ScanRunRead
 from app.services.arbitrage import ensure_aware
 from app.services.health import get_health
+from app.services.scanner import ScannerService
 
 router = APIRouter()
 
@@ -30,6 +33,29 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 def health_check() -> HealthResponse:
     return get_health()
+
+
+@router.post("/scan", response_model=ScanRunRead, status_code=202)
+def run_scan_now(db: Session = Depends(get_db)) -> ScanRun:
+    scanner = ScannerService(db)
+    scan_run = scanner.create_scan_run()
+    db.commit()
+    db.refresh(scan_run)
+    scan_now_job.delay(scan_run.id)
+    return scan_run
+
+
+@router.get("/scan-runs", response_model=list[ScanRunRead])
+def list_scan_runs(db: Session = Depends(get_db)) -> list[ScanRun]:
+    return list(db.scalars(select(ScanRun).order_by(ScanRun.started_at.desc())).all())
+
+
+@router.get("/scan-runs/{scan_run_id}", response_model=ScanRunRead)
+def get_scan_run(scan_run_id: int, db: Session = Depends(get_db)) -> ScanRun:
+    scan_run = db.get(ScanRun, scan_run_id)
+    if scan_run is None:
+        raise HTTPException(status_code=404, detail="Scan run not found")
+    return scan_run
 
 
 @router.get("/bookmakers", response_model=list[BookmakerRead])

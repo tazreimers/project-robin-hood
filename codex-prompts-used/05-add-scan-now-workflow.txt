@@ -1,0 +1,51 @@
+Add a complete scan workflow that fetches odds and then detects arbitrage.
+
+Create:
+backend/app/services/scanner.py
+
+The scanner should:
+1. fetch latest odds for configured SPORT_KEYS
+2. save odds snapshots
+3. run arbitrage detection
+4. return a summary
+
+Create a Celery job:
+backend/app/jobs/scan_now.py
+
+Add API endpoint:
+POST /scan
+
+The response should include:
+- scan_id
+- status
+- sports scanned
+- events processed
+- markets processed
+- snapshots saved
+- opportunities found
+- started_at
+- completed_at
+
+Add a ScanRun model:
+- id
+- status
+- sports_scanned
+- events_processed
+- markets_processed
+- snapshots_saved
+- opportunities_found
+- error_message
+- started_at
+- completed_at
+
+Add endpoint:
+GET /scan-runs
+GET /scan-runs/{id}
+
+Update the frontend homepage to include:
+- API status
+- button: Run scan now
+- latest scan result
+- list of active arbitrage opportunities
+
+Keep styling simple and clean.

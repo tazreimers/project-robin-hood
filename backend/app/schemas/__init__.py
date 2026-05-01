@@ -11,6 +11,7 @@ from app.schemas.odds import (
     OutcomeRead,
     SportRead,
 )
+from app.schemas.scanner import ScanRunRead
 
 __all__ = [
     "ActiveArbitrageLegRead",
@@ -23,5 +24,6 @@ __all__ = [
     "MarketRead",
     "OddsSnapshotRead",
     "OutcomeRead",
+    "ScanRunRead",
     "SportRead",
 ]

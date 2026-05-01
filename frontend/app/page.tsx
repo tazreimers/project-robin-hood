@@ -14,25 +14,18 @@ type ApiState = {
   loading: boolean;
 };
 
-type FetchOddsResult = {
+type ScanRun = {
+  id: number;
+  scan_id: number;
   status: string;
-  reason?: string;
-  sport_keys?: string[];
-  sports_saved?: number;
-  bookmakers_saved?: number;
-  events_saved?: number;
-  markets_saved?: number;
-  outcomes_saved?: number;
-  snapshots_saved?: number;
-};
-
-type JobStatus = {
-  task_id: string;
-  state: string;
-  ready: boolean;
-  successful: boolean;
-  result: FetchOddsResult | null;
-  error: string | null;
+  sports_scanned: number;
+  events_processed: number;
+  markets_processed: number;
+  snapshots_saved: number;
+  opportunities_found: number;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
 };
 
 type EventRead = {
@@ -40,17 +33,33 @@ type EventRead = {
   home_team: string;
   away_team: string;
   start_time: string;
-  normalized_event_key: string;
 };
 
-type ArbitrageOpportunityRead = {
+type BookmakerRead = {
   id: number;
-  event_id: number;
+  name: string;
+};
+
+type ActiveArbitrageLeg = {
+  id: number;
+  bookmaker: BookmakerRead;
+  outcome_name: string;
+  decimal_odds: string;
+  stake: string;
+  expected_return: string;
+};
+
+type ActiveArbitrageOpportunity = {
+  id: number;
+  event: EventRead;
   market_type: string;
+  line: string | null;
   margin: string;
   guaranteed_profit: string;
-  status: string;
+  guaranteed_return: string;
   detected_at: string;
+  freshness_status: string;
+  legs: ActiveArbitrageLeg[];
 };
 
 type ResourceState<T> = {
@@ -61,7 +70,7 @@ type ResourceState<T> = {
 
 type ScanState = {
   error: string | null;
-  job: JobStatus | null;
+  run: ScanRun | null;
   submitting: boolean;
 };
 
@@ -78,11 +87,23 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "Not completed";
+  }
+
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatMoney(value: string | number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: 2,
+  }).format(Number(value));
 }
 
 function formatPercent(value: string) {
@@ -95,19 +116,19 @@ export default function Home() {
     error: null,
     loading: true,
   });
-  const [eventsState, setEventsState] = useState<ResourceState<EventRead[]>>({
-    data: [],
+  const [latestScanState, setLatestScanState] = useState<ResourceState<ScanRun | null>>({
+    data: null,
     error: null,
     loading: true,
   });
-  const [opportunitiesState, setOpportunitiesState] = useState<ResourceState<ArbitrageOpportunityRead[]>>({
+  const [opportunitiesState, setOpportunitiesState] = useState<ResourceState<ActiveArbitrageOpportunity[]>>({
     data: [],
     error: null,
     loading: true,
   });
   const [scanState, setScanState] = useState<ScanState>({
     error: null,
-    job: null,
+    run: null,
     submitting: false,
   });
 
@@ -123,15 +144,15 @@ export default function Home() {
     }
   }, []);
 
-  const loadEvents = useCallback(async () => {
-    setEventsState((current) => ({ ...current, loading: true, error: null }));
+  const loadLatestScan = useCallback(async () => {
+    setLatestScanState((current) => ({ ...current, loading: true, error: null }));
 
     try {
-      const events = await fetchJson<EventRead[]>("/events");
-      setEventsState({ data: events, error: null, loading: false });
+      const scanRuns = await fetchJson<ScanRun[]>("/scan-runs");
+      setLatestScanState({ data: scanRuns[0] ?? null, error: null, loading: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to load events";
-      setEventsState({ data: [], error: message, loading: false });
+      const message = error instanceof Error ? error.message : "Unable to load scan runs";
+      setLatestScanState({ data: null, error: message, loading: false });
     }
   }, []);
 
@@ -139,7 +160,7 @@ export default function Home() {
     setOpportunitiesState((current) => ({ ...current, loading: true, error: null }));
 
     try {
-      const opportunities = await fetchJson<ArbitrageOpportunityRead[]>("/opportunities");
+      const opportunities = await fetchJson<ActiveArbitrageOpportunity[]>("/opportunities/active");
       setOpportunitiesState({ data: opportunities, error: null, loading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load opportunities";
@@ -147,18 +168,19 @@ export default function Home() {
     }
   }, []);
 
-  const loadScannerData = useCallback(async () => {
-    await Promise.all([loadEvents(), loadOpportunities()]);
-  }, [loadEvents, loadOpportunities]);
+  const refreshDashboard = useCallback(async () => {
+    await Promise.all([loadLatestScan(), loadOpportunities()]);
+  }, [loadLatestScan, loadOpportunities]);
 
-  const pollJob = useCallback(
-    async (taskId: string) => {
-      for (let attempt = 0; attempt < 30; attempt += 1) {
-        const job = await fetchJson<JobStatus>(`/jobs/${taskId}`);
-        setScanState({ error: null, job, submitting: !job.ready });
+  const pollScanRun = useCallback(
+    async (scanId: number) => {
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const run = await fetchJson<ScanRun>(`/scan-runs/${scanId}`);
+        const stillRunning = run.status === "queued" || run.status === "running";
+        setScanState({ error: null, run, submitting: stillRunning });
 
-        if (job.ready) {
-          await loadScannerData();
+        if (!stillRunning) {
+          await refreshDashboard();
           return;
         }
 
@@ -167,41 +189,30 @@ export default function Home() {
 
       setScanState((current) => ({
         ...current,
-        error: "Scan is still running. Refresh the job status in a moment.",
+        error: "Scan is still running. Refresh the dashboard in a moment.",
         submitting: false,
       }));
     },
-    [loadScannerData],
+    [refreshDashboard],
   );
 
   const runScan = useCallback(async () => {
-    setScanState({ error: null, job: null, submitting: true });
+    setScanState({ error: null, run: null, submitting: true });
 
     try {
-      const queued = await fetchJson<{ status: string; task_id: string }>("/jobs/fetch-odds", { method: "POST" });
-      setScanState({
-        error: null,
-        job: {
-          task_id: queued.task_id,
-          state: queued.status.toUpperCase(),
-          ready: false,
-          successful: false,
-          result: null,
-          error: null,
-        },
-        submitting: true,
-      });
-      await pollJob(queued.task_id);
+      const run = await fetchJson<ScanRun>("/scan", { method: "POST" });
+      setScanState({ error: null, run, submitting: true });
+      await pollScanRun(run.scan_id);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to start scan";
-      setScanState({ error: message, job: null, submitting: false });
+      setScanState({ error: message, run: null, submitting: false });
     }
-  }, [pollJob]);
+  }, [pollScanRun]);
 
   useEffect(() => {
     void loadHealth();
-    void loadScannerData();
-  }, [loadHealth, loadScannerData]);
+    void refreshDashboard();
+  }, [loadHealth, refreshDashboard]);
 
   const badge = useMemo(() => {
     if (apiState.loading) {
@@ -215,7 +226,7 @@ export default function Home() {
     return { className: "statusBadge ok", label: "Online" };
   }, [apiState.error, apiState.loading]);
 
-  const latestScan = scanState.job?.result;
+  const displayedScan = scanState.run ?? latestScanState.data;
 
   return (
     <main className="page">
@@ -261,77 +272,66 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="panel" aria-labelledby="queue-heading">
+          <section className="panel" aria-labelledby="scan-heading">
             <div className="panelHeader">
-              <h2 id="queue-heading">Scanner queue</h2>
+              <h2 id="scan-heading">Latest scan</h2>
               <button className="primaryButton" type="button" onClick={runScan} disabled={scanState.submitting}>
-                {scanState.submitting ? "Scanning" : "Run scan"}
+                {scanState.submitting ? "Scanning" : "Run scan now"}
               </button>
             </div>
+
             <div className="statusBody">
-              <div className="metric">
-                <span className="metricLabel">Worker</span>
-                <span className="metricValue">Celery</span>
-              </div>
-              <div className="metric">
-                <span className="metricLabel">Broker</span>
-                <span className="metricValue">Redis</span>
-              </div>
-              <div className="metric">
-                <span className="metricLabel">Scan task</span>
-                <span className="metricValue">{scanState.job?.state ?? "Standby"}</span>
-              </div>
-              {scanState.job ? (
-                <div className="metric">
-                  <span className="metricLabel">Task ID</span>
-                  <span className="metricValue">{scanState.job.task_id}</span>
-                </div>
-              ) : null}
-              {latestScan ? (
-                <div className="metric">
-                  <span className="metricLabel">Last result</span>
-                  <span className="metricValue">
-                    {latestScan.status}
-                    {typeof latestScan.events_saved === "number" ? `, ${latestScan.events_saved} events` : ""}
-                  </span>
-                </div>
-              ) : null}
+              {latestScanState.error ? <p className="notice error">{latestScanState.error}</p> : null}
               {scanState.error ? <p className="notice error">{scanState.error}</p> : null}
-              {scanState.job?.error ? <p className="notice error">{scanState.job.error}</p> : null}
+              {displayedScan ? (
+                <>
+                  <div className="metric">
+                    <span className="metricLabel">Scan ID</span>
+                    <span className="metricValue">#{displayedScan.scan_id}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Status</span>
+                    <span className="metricValue">{displayedScan.status}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Sports</span>
+                    <span className="metricValue">{displayedScan.sports_scanned}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Events</span>
+                    <span className="metricValue">{displayedScan.events_processed}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Markets</span>
+                    <span className="metricValue">{displayedScan.markets_processed}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Snapshots</span>
+                    <span className="metricValue">{displayedScan.snapshots_saved}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Opportunities</span>
+                    <span className="metricValue">{displayedScan.opportunities_found}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metricLabel">Completed</span>
+                    <span className="metricValue">{formatDateTime(displayedScan.completed_at)}</span>
+                  </div>
+                  {displayedScan.error_message ? <p className="notice error">{displayedScan.error_message}</p> : null}
+                </>
+              ) : latestScanState.loading ? (
+                <p className="notice">Loading scan history.</p>
+              ) : (
+                <p className="notice">No scans have run yet.</p>
+              )}
             </div>
           </section>
         </div>
 
         <div className="contentGrid">
-          <section className="panel" aria-labelledby="events-heading">
-            <div className="panelHeader">
-              <h2 id="events-heading">Upcoming events</h2>
-              <button className="refreshButton" type="button" onClick={loadEvents} disabled={eventsState.loading}>
-                Refresh
-              </button>
-            </div>
-            <div className="table">
-              {eventsState.error ? <p className="notice error">{eventsState.error}</p> : null}
-              {!eventsState.error && eventsState.loading ? <p className="notice">Loading events.</p> : null}
-              {!eventsState.error && !eventsState.loading && eventsState.data.length === 0 ? (
-                <p className="notice">No events loaded.</p>
-              ) : null}
-              {eventsState.data.map((event) => (
-                <div className="dataRow eventRow" key={event.id}>
-                  <div className="primaryCell">
-                    <span>{event.home_team}</span>
-                    <span className="mutedText">vs {event.away_team}</span>
-                  </div>
-                  <span>{formatDateTime(event.start_time)}</span>
-                  <span className="mutedText">#{event.id}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
           <section className="panel" aria-labelledby="opportunities-heading">
             <div className="panelHeader">
-              <h2 id="opportunities-heading">Opportunities</h2>
+              <h2 id="opportunities-heading">Active opportunities</h2>
               <button
                 className="refreshButton"
                 type="button"
@@ -347,17 +347,29 @@ export default function Home() {
                 <p className="notice">Loading opportunities.</p>
               ) : null}
               {!opportunitiesState.error && !opportunitiesState.loading && opportunitiesState.data.length === 0 ? (
-                <p className="notice">No opportunities detected.</p>
+                <p className="notice">No active opportunities detected.</p>
               ) : null}
               {opportunitiesState.data.map((opportunity) => (
-                <div className="dataRow opportunityRow" key={opportunity.id}>
+                <div className="dataRow activeOpportunityRow" key={opportunity.id}>
                   <div className="primaryCell">
-                    <span>Event #{opportunity.event_id}</span>
-                    <span className="mutedText">{opportunity.market_type}</span>
+                    <span>
+                      {opportunity.event.home_team} vs {opportunity.event.away_team}
+                    </span>
+                    <span className="mutedText">
+                      {opportunity.market_type} - {formatDateTime(opportunity.event.start_time)}
+                    </span>
                   </div>
                   <span>{formatPercent(opportunity.margin)}</span>
-                  <span>{opportunity.status}</span>
-                  <span>{formatDateTime(opportunity.detected_at)}</span>
+                  <span>{formatMoney(opportunity.guaranteed_profit)}</span>
+                  <span>{opportunity.freshness_status}</span>
+                  <div className="legsCell">
+                    {opportunity.legs.map((leg) => (
+                      <span className="mutedText" key={leg.id}>
+                        {leg.bookmaker.name}: {leg.outcome_name} @ {leg.decimal_odds}, stake{" "}
+                        {formatMoney(leg.stake)}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

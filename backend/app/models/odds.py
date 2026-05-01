@@ -151,3 +151,22 @@ class ArbitrageLeg(Base):
 
     opportunity: Mapped[ArbitrageOpportunity] = relationship(back_populates="legs")
     bookmaker: Mapped[Bookmaker] = relationship(back_populates="arbitrage_legs")
+
+
+class ScanRun(Base):
+    __tablename__ = "scan_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(String(32), default="queued", server_default="queued", index=True)
+    sports_scanned: Mapped[int] = mapped_column(default=0, server_default="0")
+    events_processed: Mapped[int] = mapped_column(default=0, server_default="0")
+    markets_processed: Mapped[int] = mapped_column(default=0, server_default="0")
+    snapshots_saved: Mapped[int] = mapped_column(default=0, server_default="0")
+    opportunities_found: Mapped[int] = mapped_column(default=0, server_default="0")
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def scan_id(self) -> int:
+        return self.id

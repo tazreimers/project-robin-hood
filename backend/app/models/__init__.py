@@ -7,6 +7,7 @@ from app.models.odds import (
     Market,
     OddsSnapshot,
     Outcome,
+    ScanRun,
     Sport,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "Market",
     "OddsSnapshot",
     "Outcome",
+    "ScanRun",
     "Sport",
 ]

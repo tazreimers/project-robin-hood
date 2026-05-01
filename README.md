@@ -60,7 +60,7 @@ Open the frontend:
 http://localhost:3000
 ```
 
-The dashboard can trigger an odds scan and display fetched events and detected opportunities.
+The dashboard can trigger a full scan, display the latest scan run, and show active opportunities.
 
 Check the API directly:
 
@@ -74,6 +74,9 @@ Core read endpoints:
 GET /bookmakers
 GET /sports
 GET /events
+POST /scan
+GET /scan-runs
+GET /scan-runs/{id}
 GET /opportunities
 GET /opportunities/active
 GET /opportunities/{id}
@@ -102,6 +105,19 @@ Trigger a manual scrape:
 
 ```bash
 curl -X POST http://localhost:8000/jobs/fetch-odds
+```
+
+Run the complete scan workflow, which fetches odds and then detects arbitrage:
+
+```bash
+curl -X POST http://localhost:8000/scan
+```
+
+Inspect recent scan runs:
+
+```bash
+curl http://localhost:8000/scan-runs
+curl http://localhost:8000/scan-runs/{id}
 ```
 
 Check the queued job:
