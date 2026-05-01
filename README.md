@@ -37,6 +37,9 @@ REDIS_URL=redis://redis:6379/0
 ODDS_API_KEY=
 SPORT_KEYS=afl,nrl
 ODDS_REGIONS=au
+DEFAULT_TOTAL_STAKE=1000
+MIN_ARBITRAGE_MARGIN=0.01
+MAX_ODDS_AGE_SECONDS=60
 ```
 
 `ODDS_API_KEY` is optional for bootstrapping. Odds ingestion returns a skipped result when it is not configured.
@@ -72,8 +75,10 @@ GET /bookmakers
 GET /sports
 GET /events
 GET /opportunities
+GET /opportunities/active
 GET /opportunities/{id}
 POST /jobs/fetch-odds
+POST /jobs/detect-arbitrage
 GET /jobs/{task_id}
 ```
 
@@ -109,6 +114,18 @@ Inspect stored events through the API:
 
 ```bash
 curl http://localhost:8000/events
+```
+
+Detect arbitrage from recent odds snapshots:
+
+```bash
+curl -X POST http://localhost:8000/jobs/detect-arbitrage
+```
+
+Inspect active opportunities with event details, bookmaker legs, stake sizing, and freshness status:
+
+```bash
+curl http://localhost:8000/opportunities/active
 ```
 
 Inspect stored markets, outcomes, and snapshots in Postgres:

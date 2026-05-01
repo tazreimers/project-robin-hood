@@ -1,4 +1,5 @@
 from functools import lru_cache
+from decimal import Decimal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,9 @@ class Settings(BaseSettings):
     odds_api_key: str = ""
     sport_keys: str = ""
     odds_regions: str = "au"
+    default_total_stake: Decimal = Decimal("1000")
+    min_arbitrage_margin: Decimal = Decimal("0.01")
+    max_odds_age_seconds: int = 60
     cors_origins: list[str] = ["http://localhost:3000"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

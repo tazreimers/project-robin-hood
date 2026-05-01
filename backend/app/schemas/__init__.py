@@ -1,5 +1,7 @@
 from app.schemas.health import HealthResponse
 from app.schemas.odds import (
+    ActiveArbitrageLegRead,
+    ActiveArbitrageOpportunityRead,
     ArbitrageLegRead,
     ArbitrageOpportunityRead,
     BookmakerRead,
@@ -11,6 +13,8 @@ from app.schemas.odds import (
 )
 
 __all__ = [
+    "ActiveArbitrageLegRead",
+    "ActiveArbitrageOpportunityRead",
     "ArbitrageLegRead",
     "ArbitrageOpportunityRead",
     "BookmakerRead",
