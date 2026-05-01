@@ -13,8 +13,8 @@ class ArbitrageLeg:
 
 @dataclass(frozen=True)
 class ArbitrageResult:
-    total_implied_probability: Decimal
-    profit_margin: Decimal
+    implied_probability_total: Decimal
+    margin: Decimal
     legs: list[ArbitrageLeg]
 
 
@@ -38,12 +38,12 @@ def find_arbitrage(outcomes_by_bookmaker: Mapping[str, Mapping[str, Decimal]]) -
     if len(best_by_outcome) < 2:
         return None
 
-    total_implied_probability = sum((leg.implied_probability for leg in best_by_outcome.values()), Decimal("0"))
-    if total_implied_probability >= Decimal("1"):
+    implied_probability_total = sum((leg.implied_probability for leg in best_by_outcome.values()), Decimal("0"))
+    if implied_probability_total >= Decimal("1"):
         return None
 
     return ArbitrageResult(
-        total_implied_probability=total_implied_probability,
-        profit_margin=Decimal("1") - total_implied_probability,
+        implied_probability_total=implied_probability_total,
+        margin=Decimal("1") - implied_probability_total,
         legs=list(best_by_outcome.values()),
     )

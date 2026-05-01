@@ -1,4 +1,23 @@
 from app.models.base import Base
-from app.models.odds import ArbitrageOpportunity, Bookmaker, Event, OddsQuote
+from app.models.odds import (
+    ArbitrageLeg,
+    ArbitrageOpportunity,
+    Bookmaker,
+    Event,
+    Market,
+    OddsSnapshot,
+    Outcome,
+    Sport,
+)
 
-__all__ = ["ArbitrageOpportunity", "Base", "Bookmaker", "Event", "OddsQuote"]
+__all__ = [
+    "ArbitrageLeg",
+    "ArbitrageOpportunity",
+    "Base",
+    "Bookmaker",
+    "Event",
+    "Market",
+    "OddsSnapshot",
+    "Outcome",
+    "Sport",
+]

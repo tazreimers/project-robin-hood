@@ -59,6 +59,16 @@ Check the API directly:
 curl http://localhost:8000/health
 ```
 
+Core read endpoints:
+
+```text
+GET /bookmakers
+GET /sports
+GET /events
+GET /opportunities
+GET /opportunities/{id}
+```
+
 ## Database Migrations
 
 The API service runs migrations on container startup. To run them manually:
