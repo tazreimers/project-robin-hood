@@ -48,7 +48,7 @@ The current provider is The Odds API v4: `https://the-odds-api.com/liveapi/guide
 Start the full stack:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 Open the frontend:
@@ -56,6 +56,8 @@ Open the frontend:
 ```text
 http://localhost:3000
 ```
+
+The dashboard can trigger an odds scan and display fetched events and detected opportunities.
 
 Check the API directly:
 
@@ -72,6 +74,7 @@ GET /events
 GET /opportunities
 GET /opportunities/{id}
 POST /jobs/fetch-odds
+GET /jobs/{task_id}
 ```
 
 ## Odds Ingestion
@@ -94,6 +97,12 @@ Trigger a manual scrape:
 
 ```bash
 curl -X POST http://localhost:8000/jobs/fetch-odds
+```
+
+Check the queued job:
+
+```bash
+curl http://localhost:8000/jobs/{task_id}
 ```
 
 Inspect stored events through the API:

@@ -3,9 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_db
+from app.jobs.celery_app import celery_app
 from app.jobs.fetch_odds import fetch_odds as fetch_odds_job
+from app.logging_utils import redact_secrets
 from app.models import ArbitrageOpportunity, Bookmaker, Event, Sport
 from app.schemas.health import HealthResponse
+from app.schemas.jobs import JobStatusRead
 from app.schemas.odds import ArbitrageOpportunityRead, BookmakerRead, EventRead, SportRead
 from app.services.health import get_health
 
@@ -60,3 +63,26 @@ def get_opportunity(opportunity_id: int, db: Session = Depends(get_db)) -> Arbit
 def enqueue_fetch_odds() -> dict[str, str]:
     task = fetch_odds_job.delay()
     return {"status": "queued", "task_id": task.id}
+
+
+@router.get("/jobs/{task_id}", response_model=JobStatusRead)
+def get_job_status(task_id: str) -> JobStatusRead:
+    task = celery_app.AsyncResult(task_id)
+    result = task.result if task.ready() else None
+
+    if task.successful() and isinstance(result, dict):
+        return JobStatusRead(
+            task_id=task_id,
+            state=task.state,
+            ready=True,
+            successful=True,
+            result=result,
+        )
+
+    return JobStatusRead(
+        task_id=task_id,
+        state=task.state,
+        ready=task.ready(),
+        successful=task.successful(),
+        error=redact_secrets(result) if task.failed() and result is not None else None,
+    )

@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from app.config import Settings, get_settings
+from app.logging_utils import redact_secrets
 from app.services.providers.base import (
     OddsProvider,
     OddsProviderConfigurationError,
@@ -79,11 +80,12 @@ class TheOddsApiProvider(OddsProvider):
             response = self.client.get(path, params=request_params)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            response_text = redact_secrets(exc.response.text[:200])
             raise OddsProviderError(
-                f"The Odds API returned HTTP {exc.response.status_code}: {exc.response.text[:200]}"
+                f"The Odds API returned HTTP {exc.response.status_code}: {response_text}"
             ) from exc
         except httpx.HTTPError as exc:
-            raise OddsProviderError(f"Failed to call The Odds API: {exc}") from exc
+            raise OddsProviderError(f"Failed to call The Odds API: {redact_secrets(exc)}") from exc
 
         return response.json()
 
