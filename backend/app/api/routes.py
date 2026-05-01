@@ -20,6 +20,8 @@ from app.schemas.odds import (
     ArbitrageOpportunityRead,
     BookmakerRead,
     EventRead,
+    OpportunityInstructionLegRead,
+    OpportunityInstructionsRead,
     SportRead,
 )
 from app.schemas.scanner import ScanRunRead
@@ -123,6 +125,24 @@ def get_opportunity(opportunity_id: int, db: Session = Depends(get_db)) -> Arbit
     return opportunity
 
 
+@router.get("/opportunities/{opportunity_id}/instructions", response_model=OpportunityInstructionsRead)
+def get_opportunity_instructions(
+    opportunity_id: int,
+    db: Session = Depends(get_db),
+) -> OpportunityInstructionsRead:
+    opportunity = get_opportunity_with_details(opportunity_id, db)
+    return build_opportunity_instructions(opportunity=opportunity, db=db, now=datetime.now(timezone.utc))
+
+
+@router.post("/opportunities/{opportunity_id}/mark-actioned", response_model=ArbitrageOpportunityRead)
+def mark_opportunity_actioned(opportunity_id: int, db: Session = Depends(get_db)) -> ArbitrageOpportunity:
+    opportunity = get_opportunity_with_details(opportunity_id, db)
+    opportunity.status = "ACTIONED"
+    db.commit()
+    db.refresh(opportunity)
+    return opportunity
+
+
 @router.post("/jobs/fetch-odds", status_code=202)
 def enqueue_fetch_odds() -> dict[str, str]:
     task = fetch_odds_job.delay()
@@ -206,6 +226,92 @@ def get_latest_snapshot_at(db: Session, opportunity: ArbitrageOpportunity) -> da
     query = select(func.max(OddsSnapshot.captured_at)).where(
         OddsSnapshot.event_id == opportunity.event_id,
         OddsSnapshot.market_type == opportunity.market_type,
+    )
+    query = query.where(OddsSnapshot.line.is_(None)) if opportunity.line is None else query.where(
+        OddsSnapshot.line == opportunity.line
+    )
+    return db.scalar(query)
+
+
+def get_opportunity_with_details(opportunity_id: int, db: Session) -> ArbitrageOpportunity:
+    query = (
+        select(ArbitrageOpportunity)
+        .options(
+            selectinload(ArbitrageOpportunity.event),
+            selectinload(ArbitrageOpportunity.legs).selectinload(ArbitrageLeg.bookmaker),
+        )
+        .where(ArbitrageOpportunity.id == opportunity_id)
+    )
+    opportunity = db.scalar(query)
+    if opportunity is None:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    return opportunity
+
+
+def build_opportunity_instructions(
+    opportunity: ArbitrageOpportunity,
+    db: Session,
+    now: datetime,
+) -> OpportunityInstructionsRead:
+    instruction_legs: list[OpportunityInstructionLegRead] = []
+
+    for leg in opportunity.legs:
+        source_last_seen_at = get_leg_source_last_seen_at(db, opportunity, leg)
+        odds_age_seconds: int | None = None
+        if source_last_seen_at is not None:
+            source_last_seen_at = ensure_aware(source_last_seen_at)
+            odds_age_seconds = max(0, int((now - source_last_seen_at).total_seconds()))
+
+        instruction = (
+            f"Bet AUD {leg.stake} on {leg.outcome_name} at {leg.bookmaker.name} "
+            f"only if decimal odds are still {leg.decimal_odds} or better."
+        )
+        instruction_legs.append(
+            OpportunityInstructionLegRead(
+                id=leg.id,
+                bookmaker=BookmakerRead.model_validate(leg.bookmaker),
+                outcome_name=leg.outcome_name,
+                decimal_odds=leg.decimal_odds,
+                stake=leg.stake,
+                expected_return=leg.expected_return,
+                source_last_seen_at=source_last_seen_at,
+                odds_age_seconds=odds_age_seconds,
+                instruction=instruction,
+            )
+        )
+
+    return OpportunityInstructionsRead(
+        id=opportunity.id,
+        event=EventRead.model_validate(opportunity.event),
+        market=opportunity.market_type,
+        line=opportunity.line,
+        total_stake=opportunity.total_stake,
+        guaranteed_profit=opportunity.guaranteed_profit,
+        guaranteed_return=opportunity.guaranteed_return,
+        margin=opportunity.margin,
+        legs=instruction_legs,
+        instructions=[
+            "Open each bookmaker manually before placing any bet.",
+            "Confirm the event, market, outcome, and decimal odds for every leg.",
+            "Place all listed stakes only if every quoted price is still available or better.",
+            "Do not place any leg unless you can place every leg in the opportunity.",
+        ],
+        warning="Re-check odds manually before placing any bet. Do not place a bet if the odds have changed.",
+    )
+
+
+def get_leg_source_last_seen_at(
+    db: Session,
+    opportunity: ArbitrageOpportunity,
+    leg: ArbitrageLeg,
+) -> datetime | None:
+    query = (
+        select(func.max(OddsSnapshot.captured_at))
+        .where(OddsSnapshot.event_id == opportunity.event_id)
+        .where(OddsSnapshot.market_type == opportunity.market_type)
+        .where(OddsSnapshot.bookmaker_id == leg.bookmaker_id)
+        .where(OddsSnapshot.outcome_name == leg.outcome_name)
+        .where(OddsSnapshot.decimal_odds == leg.decimal_odds)
     )
     query = query.where(OddsSnapshot.line.is_(None)) if opportunity.line is None else query.where(
         OddsSnapshot.line == opportunity.line

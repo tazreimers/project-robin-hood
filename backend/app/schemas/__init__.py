@@ -8,6 +8,8 @@ from app.schemas.odds import (
     EventRead,
     MarketRead,
     OddsSnapshotRead,
+    OpportunityInstructionLegRead,
+    OpportunityInstructionsRead,
     OutcomeRead,
     SportRead,
 )
@@ -23,6 +25,8 @@ __all__ = [
     "HealthResponse",
     "MarketRead",
     "OddsSnapshotRead",
+    "OpportunityInstructionLegRead",
+    "OpportunityInstructionsRead",
     "OutcomeRead",
     "ScanRunRead",
     "SportRead",

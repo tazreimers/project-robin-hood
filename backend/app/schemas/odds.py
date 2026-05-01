@@ -136,3 +136,33 @@ class ActiveArbitrageOpportunityRead(BaseModel):
     legs: list[ActiveArbitrageLegRead] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OpportunityInstructionLegRead(BaseModel):
+    id: int
+    bookmaker: BookmakerRead
+    outcome_name: str
+    decimal_odds: Decimal
+    stake: Decimal
+    expected_return: Decimal
+    source_last_seen_at: datetime | None
+    odds_age_seconds: int | None
+    instruction: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OpportunityInstructionsRead(BaseModel):
+    id: int
+    event: EventRead
+    market: str
+    line: Decimal | None
+    total_stake: Decimal
+    guaranteed_profit: Decimal
+    guaranteed_return: Decimal
+    margin: Decimal
+    legs: list[OpportunityInstructionLegRead] = Field(default_factory=list)
+    instructions: list[str] = Field(default_factory=list)
+    warning: str
+
+    model_config = ConfigDict(from_attributes=True)

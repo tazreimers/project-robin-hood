@@ -80,6 +80,8 @@ GET /scan-runs/{id}
 GET /opportunities
 GET /opportunities/active
 GET /opportunities/{id}
+GET /opportunities/{id}/instructions
+POST /opportunities/{id}/mark-actioned
 POST /jobs/fetch-odds
 POST /jobs/detect-arbitrage
 GET /jobs/{task_id}
@@ -142,6 +144,18 @@ Inspect active opportunities with event details, bookmaker legs, stake sizing, a
 
 ```bash
 curl http://localhost:8000/opportunities/active
+```
+
+Open manual bet instructions for an opportunity:
+
+```bash
+curl http://localhost:8000/opportunities/{id}/instructions
+```
+
+Mark an opportunity as actioned after manual handling:
+
+```bash
+curl -X POST http://localhost:8000/opportunities/{id}/mark-actioned
 ```
 
 Inspect stored markets, outcomes, and snapshots in Postgres:

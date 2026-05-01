@@ -32,6 +32,10 @@ button {
   font: inherit;
 }
 
+a {
+  color: inherit;
+}
+
 .page {
   min-height: 100vh;
   padding: 32px;
@@ -48,6 +52,12 @@ button {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 24px;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .eyebrow {
@@ -142,18 +152,33 @@ h2 {
   cursor: pointer;
 }
 
+.linkButton,
 .primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 36px;
   padding: 0 14px;
-  border: 1px solid var(--accent);
   border-radius: 6px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.linkButton {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.primaryButton {
+  border: 1px solid var(--accent);
   background: var(--accent);
   color: #ffffff;
   cursor: pointer;
-  font-weight: 700;
 }
 
 .refreshButton:hover,
+.linkButton:hover,
 .primaryButton:hover {
   border-color: var(--accent);
 }
@@ -235,8 +260,16 @@ h2 {
   grid-template-columns: minmax(0, 1.2fr) 120px 110px minmax(180px, 0.7fr);
 }
 
+.opportunityListRow {
+  grid-template-columns: minmax(0, 1.2fr) 100px 130px 100px 96px;
+}
+
 .activeOpportunityRow {
   grid-template-columns: minmax(0, 1.2fr) 100px 120px 90px minmax(220px, 1fr);
+}
+
+.instructionLegRow {
+  grid-template-columns: minmax(0, 1.4fr) minmax(120px, 0.6fr) 80px 110px 130px minmax(180px, 0.8fr);
 }
 
 .primaryCell {
@@ -270,6 +303,11 @@ h2 {
     flex-direction: column;
   }
 
+  .topbarActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .summaryGrid {
     grid-template-columns: 1fr;
   }
@@ -287,7 +325,9 @@ h2 {
 
   .eventRow,
   .opportunityRow,
-  .activeOpportunityRow {
+  .opportunityListRow,
+  .activeOpportunityRow,
+  .instructionLegRow {
     grid-template-columns: 1fr;
     gap: 6px;
   }

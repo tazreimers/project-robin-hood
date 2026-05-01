@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type HealthResponse = {
@@ -236,7 +237,12 @@ export default function Home() {
             <p className="eyebrow">Project Robin Hood</p>
             <h1>Arbitrage Scanner</h1>
           </div>
-          <span className={badge.className}>{badge.label}</span>
+          <div className="topbarActions">
+            <Link className="linkButton" href="/opportunities">
+              Opportunities
+            </Link>
+            <span className={badge.className}>{badge.label}</span>
+          </div>
         </header>
 
         <div className="summaryGrid">
@@ -352,9 +358,9 @@ export default function Home() {
               {opportunitiesState.data.map((opportunity) => (
                 <div className="dataRow activeOpportunityRow" key={opportunity.id}>
                   <div className="primaryCell">
-                    <span>
+                    <Link href={`/opportunities/${opportunity.id}`}>
                       {opportunity.event.home_team} vs {opportunity.event.away_team}
-                    </span>
+                    </Link>
                     <span className="mutedText">
                       {opportunity.market_type} - {formatDateTime(opportunity.event.start_time)}
                     </span>
