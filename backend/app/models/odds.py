@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -131,6 +131,10 @@ class ArbitrageOpportunity(Base):
     guaranteed_return: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     guaranteed_profit: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     status: Mapped[str] = mapped_column(String(32), default="open", server_default="open")
+    reliability_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0.00"), server_default="0")
+    validation_status: Mapped[str] = mapped_column(String(32), default="STALE", server_default="STALE")
+    validation_reasons: Mapped[dict[str, object]] = mapped_column(JSON, default=dict, server_default="{}")
+    last_validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

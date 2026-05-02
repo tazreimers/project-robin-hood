@@ -39,6 +39,28 @@ export type ActiveArbitrageLeg = {
   expected_return: string;
 };
 
+export type ValidationStatus = "FRESH" | "STALE" | "RISKY" | "EXPIRED";
+
+export type OpportunityValidationReasons = {
+  odds_age_seconds?: number | null;
+  event_start_minutes?: number | null;
+  market_consistency_score?: number;
+  event_matching_confidence?: number;
+  all_legs_available?: boolean;
+  recommended_status?: ValidationStatus;
+  reasons?: string[];
+  leg_checks?: Array<{
+    leg_id: number;
+    bookmaker_name: string;
+    outcome_name: string;
+    required_odds: string;
+    latest_odds: string | null;
+    captured_at: string | null;
+    odds_age_seconds: number | null;
+    available: boolean;
+  }>;
+};
+
 export type ActiveArbitrageOpportunity = {
   id: number;
   event: EventRead;
@@ -48,7 +70,13 @@ export type ActiveArbitrageOpportunity = {
   guaranteed_profit: string;
   guaranteed_return: string;
   detected_at: string;
+  latest_snapshot_at: string | null;
+  odds_age_seconds: number | null;
   freshness_status: string;
+  reliability_score: string;
+  validation_status: ValidationStatus;
+  validation_reasons: OpportunityValidationReasons;
+  last_validated_at: string | null;
   legs: ActiveArbitrageLeg[];
 };
 
@@ -105,8 +133,9 @@ export function getScanRun(scanId: number) {
   return fetchJson<ScanRun>(`/scan-runs/${scanId}`);
 }
 
-export function getActiveOpportunities() {
-  return fetchJson<ActiveArbitrageOpportunity[]>("/opportunities/active");
+export function getActiveOpportunities(includeStale = false) {
+  const query = includeStale ? "?include_stale=true" : "";
+  return fetchJson<ActiveArbitrageOpportunity[]>(`/opportunities/active${query}`);
 }
 
 export function getOpportunityInstructions(opportunityId: string) {

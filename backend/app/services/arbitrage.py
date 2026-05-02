@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
 from app.models import ArbitrageLeg, ArbitrageOpportunity, OddsSnapshot
+from app.services.opportunity_validator import OpportunityValidator
 
 IMPLIED_PROBABILITY_PRECISION = Decimal("0.000001")
 MONEY_PRECISION = Decimal("0.01")
@@ -257,6 +258,8 @@ class ArbitrageDetectionService:
                 )
             )
 
+        self.db.flush()
+        OpportunityValidator(self.db, settings=self.settings).validate_and_apply(opportunity, now=detected_at)
         self.db.flush()
         return opportunity
 

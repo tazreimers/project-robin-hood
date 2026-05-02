@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
@@ -25,8 +25,15 @@ from app.schemas.odds import (
     SportRead,
 )
 from app.schemas.scanner import ScanRunRead
-from app.services.arbitrage import ensure_aware
 from app.services.health import get_health
+from app.services.opportunity_validator import (
+    FRESH,
+    RISKY,
+    STALE,
+    OpportunityValidationResult,
+    OpportunityValidator,
+    ensure_aware,
+)
 from app.services.scanner import ScannerService
 
 router = APIRouter()
@@ -86,7 +93,10 @@ def list_opportunities(db: Session = Depends(get_db)) -> list[ArbitrageOpportuni
 
 
 @router.get("/opportunities/active", response_model=list[ActiveArbitrageOpportunityRead])
-def list_active_opportunities(db: Session = Depends(get_db)) -> list[ActiveArbitrageOpportunityRead]:
+def list_active_opportunities(
+    include_stale: bool = False,
+    db: Session = Depends(get_db),
+) -> list[ActiveArbitrageOpportunityRead]:
     settings = get_settings()
     now = datetime.now(timezone.utc)
     query = (
@@ -96,19 +106,24 @@ def list_active_opportunities(db: Session = Depends(get_db)) -> list[ActiveArbit
             selectinload(ArbitrageOpportunity.legs).selectinload(ArbitrageLeg.bookmaker),
         )
         .where(ArbitrageOpportunity.status == "open")
-        .where(or_(ArbitrageOpportunity.expires_at.is_(None), ArbitrageOpportunity.expires_at > now))
         .order_by(ArbitrageOpportunity.detected_at.desc())
     )
 
-    return [
-        build_active_opportunity_response(
-            opportunity=opportunity,
-            db=db,
-            now=now,
-            max_odds_age_seconds=settings.max_odds_age_seconds,
-        )
-        for opportunity in db.scalars(query).all()
-    ]
+    allowed_statuses = {FRESH, RISKY}
+    if include_stale:
+        allowed_statuses.add(STALE)
+
+    validator = OpportunityValidator(db, settings=settings)
+    responses: list[ActiveArbitrageOpportunityRead] = []
+    for opportunity in db.scalars(query).all():
+        validation = validator.validate_and_apply(opportunity, now=now)
+        if validation.recommended_status not in allowed_statuses:
+            continue
+
+        responses.append(build_active_opportunity_response(opportunity=opportunity, validation=validation))
+
+    db.commit()
+    return responses
 
 
 @router.get("/opportunities/{opportunity_id}", response_model=ArbitrageOpportunityRead)
@@ -180,20 +195,8 @@ def get_job_status(task_id: str) -> JobStatusRead:
 
 def build_active_opportunity_response(
     opportunity: ArbitrageOpportunity,
-    db: Session,
-    now: datetime,
-    max_odds_age_seconds: int,
+    validation: OpportunityValidationResult,
 ) -> ActiveArbitrageOpportunityRead:
-    latest_snapshot_at = get_latest_snapshot_at(db, opportunity)
-    odds_age_seconds: int | None = None
-    freshness_status = "stale"
-
-    if latest_snapshot_at is not None:
-        latest_snapshot_at = ensure_aware(latest_snapshot_at)
-        odds_age_seconds = max(0, int((now - latest_snapshot_at).total_seconds()))
-        if odds_age_seconds <= max_odds_age_seconds:
-            freshness_status = "fresh"
-
     return ActiveArbitrageOpportunityRead(
         id=opportunity.id,
         event=EventRead.model_validate(opportunity.event),
@@ -205,9 +208,13 @@ def build_active_opportunity_response(
         guaranteed_profit=opportunity.guaranteed_profit,
         guaranteed_return=opportunity.guaranteed_return,
         detected_at=opportunity.detected_at,
-        latest_snapshot_at=latest_snapshot_at,
-        odds_age_seconds=odds_age_seconds,
-        freshness_status=freshness_status,
+        latest_snapshot_at=validation.latest_snapshot_at,
+        odds_age_seconds=validation.odds_age_seconds,
+        freshness_status=validation.recommended_status.lower(),
+        reliability_score=opportunity.reliability_score,
+        validation_status=opportunity.validation_status,
+        validation_reasons=opportunity.validation_reasons,
+        last_validated_at=opportunity.last_validated_at,
         legs=[
             ActiveArbitrageLegRead(
                 id=leg.id,
@@ -220,17 +227,6 @@ def build_active_opportunity_response(
             for leg in opportunity.legs
         ],
     )
-
-
-def get_latest_snapshot_at(db: Session, opportunity: ArbitrageOpportunity) -> datetime | None:
-    query = select(func.max(OddsSnapshot.captured_at)).where(
-        OddsSnapshot.event_id == opportunity.event_id,
-        OddsSnapshot.market_type == opportunity.market_type,
-    )
-    query = query.where(OddsSnapshot.line.is_(None)) if opportunity.line is None else query.where(
-        OddsSnapshot.line == opportunity.line
-    )
-    return db.scalar(query)
 
 
 def get_opportunity_with_details(opportunity_id: int, db: Session) -> ArbitrageOpportunity:

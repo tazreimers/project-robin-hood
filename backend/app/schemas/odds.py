@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -101,6 +102,10 @@ class ArbitrageOpportunityRead(BaseModel):
     guaranteed_return: Decimal
     guaranteed_profit: Decimal
     status: str
+    reliability_score: Decimal
+    validation_status: str
+    validation_reasons: dict[str, Any]
+    last_validated_at: datetime | None
     detected_at: datetime
     expires_at: datetime | None
     legs: list[ArbitrageLegRead] = Field(default_factory=list)
@@ -133,6 +138,10 @@ class ActiveArbitrageOpportunityRead(BaseModel):
     latest_snapshot_at: datetime | None
     odds_age_seconds: int | None
     freshness_status: str
+    reliability_score: Decimal
+    validation_status: str
+    validation_reasons: dict[str, Any]
+    last_validated_at: datetime | None
     legs: list[ActiveArbitrageLegRead] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
