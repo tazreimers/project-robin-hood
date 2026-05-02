@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
@@ -11,7 +12,17 @@ from app.jobs.detect_arbitrage import detect_arbitrage as detect_arbitrage_job
 from app.jobs.fetch_odds import fetch_odds as fetch_odds_job
 from app.jobs.scan_now import scan_now as scan_now_job
 from app.logging_utils import redact_secrets
-from app.models import ArbitrageLeg, ArbitrageOpportunity, Bookmaker, Event, OddsSnapshot, ScanRun, Sport
+from app.models import (
+    ArbitrageLeg,
+    ArbitrageOpportunity,
+    Bookmaker,
+    Event,
+    MarketAlias,
+    OddsSnapshot,
+    ScanRun,
+    Sport,
+    TeamAlias,
+)
 from app.schemas.health import HealthResponse
 from app.schemas.jobs import JobStatusRead
 from app.schemas.odds import (
@@ -20,12 +31,17 @@ from app.schemas.odds import (
     ArbitrageOpportunityRead,
     BookmakerRead,
     EventRead,
+    MarketAliasCreate,
+    MarketAliasRead,
     OpportunityInstructionLegRead,
     OpportunityInstructionsRead,
     SportRead,
+    TeamAliasCreate,
+    TeamAliasRead,
 )
 from app.schemas.scanner import ScanRunRead
 from app.services.health import get_health
+from app.services.normalization import canonical_sport_key, cleanup_key
 from app.services.opportunity_validator import (
     FRESH,
     RISKY,
@@ -75,6 +91,64 @@ def list_bookmakers(db: Session = Depends(get_db)) -> list[Bookmaker]:
 @router.get("/sports", response_model=list[SportRead])
 def list_sports(db: Session = Depends(get_db)) -> list[Sport]:
     return list(db.scalars(select(Sport).order_by(Sport.name)).all())
+
+
+@router.get("/aliases/teams", response_model=list[TeamAliasRead])
+def list_team_aliases(db: Session = Depends(get_db)) -> list[TeamAlias]:
+    return list(
+        db.scalars(
+            select(TeamAlias).order_by(TeamAlias.sport_key, TeamAlias.canonical_name, TeamAlias.alias)
+        ).all()
+    )
+
+
+@router.post("/aliases/teams", response_model=TeamAliasRead, status_code=201)
+def create_team_alias(payload: TeamAliasCreate, db: Session = Depends(get_db)) -> TeamAlias:
+    team_alias = TeamAlias(
+        sport_key=canonical_sport_key(payload.sport_key),
+        canonical_name=payload.canonical_name.strip(),
+        alias=payload.alias.strip(),
+    )
+    db.add(team_alias)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Team alias already exists") from exc
+
+    db.refresh(team_alias)
+    return team_alias
+
+
+@router.get("/aliases/markets", response_model=list[MarketAliasRead])
+def list_market_aliases(db: Session = Depends(get_db)) -> list[MarketAlias]:
+    return list(
+        db.scalars(
+            select(MarketAlias).order_by(
+                MarketAlias.provider,
+                MarketAlias.canonical_market_type,
+                MarketAlias.source_market_name,
+            )
+        ).all()
+    )
+
+
+@router.post("/aliases/markets", response_model=MarketAliasRead, status_code=201)
+def create_market_alias(payload: MarketAliasCreate, db: Session = Depends(get_db)) -> MarketAlias:
+    market_alias = MarketAlias(
+        provider=cleanup_key(payload.provider),
+        source_market_name=payload.source_market_name.strip(),
+        canonical_market_type=payload.canonical_market_type.strip(),
+    )
+    db.add(market_alias)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Market alias already exists") from exc
+
+    db.refresh(market_alias)
+    return market_alias
 
 
 @router.get("/events", response_model=list[EventRead])

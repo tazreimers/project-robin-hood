@@ -6,12 +6,16 @@ from app.schemas.odds import (
     ArbitrageOpportunityRead,
     BookmakerRead,
     EventRead,
+    MarketAliasCreate,
+    MarketAliasRead,
     MarketRead,
     OddsSnapshotRead,
     OpportunityInstructionLegRead,
     OpportunityInstructionsRead,
     OutcomeRead,
     SportRead,
+    TeamAliasCreate,
+    TeamAliasRead,
 )
 from app.schemas.scanner import ScanRunRead
 
@@ -23,6 +27,8 @@ __all__ = [
     "BookmakerRead",
     "EventRead",
     "HealthResponse",
+    "MarketAliasCreate",
+    "MarketAliasRead",
     "MarketRead",
     "OddsSnapshotRead",
     "OpportunityInstructionLegRead",
@@ -30,4 +36,6 @@ __all__ = [
     "OutcomeRead",
     "ScanRunRead",
     "SportRead",
+    "TeamAliasCreate",
+    "TeamAliasRead",
 ]

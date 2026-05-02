@@ -26,6 +26,32 @@ class SportRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TeamAliasCreate(BaseModel):
+    sport_key: str
+    canonical_name: str
+    alias: str
+
+
+class TeamAliasRead(TeamAliasCreate):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MarketAliasCreate(BaseModel):
+    provider: str
+    source_market_name: str
+    canonical_market_type: str
+
+
+class MarketAliasRead(MarketAliasCreate):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EventRead(BaseModel):
     id: int
     external_id: str

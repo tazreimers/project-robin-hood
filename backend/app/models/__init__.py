@@ -4,11 +4,13 @@ from app.models.odds import (
     ArbitrageOpportunity,
     Bookmaker,
     Event,
+    MarketAlias,
     Market,
     OddsSnapshot,
     Outcome,
     ScanRun,
     Sport,
+    TeamAlias,
 )
 
 __all__ = [
@@ -18,8 +20,10 @@ __all__ = [
     "Bookmaker",
     "Event",
     "Market",
+    "MarketAlias",
     "OddsSnapshot",
     "Outcome",
     "ScanRun",
     "Sport",
+    "TeamAlias",
 ]

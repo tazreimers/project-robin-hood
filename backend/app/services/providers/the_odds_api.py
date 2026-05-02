@@ -26,6 +26,7 @@ SPORT_KEY_ALIASES = {
 
 
 class TheOddsApiProvider(OddsProvider):
+    provider_name = "the_odds_api"
     base_url = "https://api.the-odds-api.com"
 
     def __init__(self, settings: Settings | None = None, client: httpx.Client | None = None) -> None:

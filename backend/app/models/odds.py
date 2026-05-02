@@ -43,6 +43,30 @@ class Sport(CreatedAtMixin, Base):
     events: Mapped[list[Event]] = relationship(back_populates="sport", cascade="all, delete-orphan")
 
 
+class TeamAlias(CreatedAtMixin, Base):
+    __tablename__ = "team_aliases"
+    __table_args__ = (
+        UniqueConstraint("sport_key", "alias", name="uq_team_aliases_sport_alias"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sport_key: Mapped[str] = mapped_column(String(64), index=True)
+    canonical_name: Mapped[str] = mapped_column(String(255), index=True)
+    alias: Mapped[str] = mapped_column(String(255))
+
+
+class MarketAlias(CreatedAtMixin, Base):
+    __tablename__ = "market_aliases"
+    __table_args__ = (
+        UniqueConstraint("provider", "source_market_name", name="uq_market_aliases_provider_source"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider: Mapped[str] = mapped_column(String(128), index=True)
+    source_market_name: Mapped[str] = mapped_column(String(255))
+    canonical_market_type: Mapped[str] = mapped_column(String(64), index=True)
+
+
 class Event(TimestampMixin, Base):
     __tablename__ = "events"
 
