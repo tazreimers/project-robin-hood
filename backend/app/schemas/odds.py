@@ -117,6 +117,62 @@ class ArbitrageLegRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OpportunityActionCreate(BaseModel):
+    action_type: str
+    notes: str | None = None
+
+
+class OpportunityActionRead(BaseModel):
+    id: int
+    opportunity_id: int
+    action_type: str
+    notes: str | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BetRecordCreate(BaseModel):
+    bookmaker_id: int
+    outcome_name: str
+    odds_taken: Decimal
+    recommended_stake: Decimal
+    actual_stake: Decimal
+    result_status: str = "PENDING"
+    payout: Decimal | None = None
+    profit_loss: Decimal | None = None
+    settled_at: datetime | None = None
+
+
+class BetRecordPatch(BaseModel):
+    bookmaker_id: int | None = None
+    outcome_name: str | None = None
+    odds_taken: Decimal | None = None
+    recommended_stake: Decimal | None = None
+    actual_stake: Decimal | None = None
+    result_status: str | None = None
+    payout: Decimal | None = None
+    profit_loss: Decimal | None = None
+    settled_at: datetime | None = None
+
+
+class BetRecordRead(BaseModel):
+    id: int
+    opportunity_id: int
+    bookmaker_id: int
+    outcome_name: str
+    odds_taken: Decimal
+    recommended_stake: Decimal
+    actual_stake: Decimal
+    result_status: str
+    payout: Decimal | None
+    profit_loss: Decimal | None
+    created_at: datetime
+    settled_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ArbitrageOpportunityRead(BaseModel):
     id: int
     event_id: int

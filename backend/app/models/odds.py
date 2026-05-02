@@ -164,6 +164,8 @@ class ArbitrageOpportunity(Base):
 
     event: Mapped[Event] = relationship(back_populates="arbitrage_opportunities")
     legs: Mapped[list[ArbitrageLeg]] = relationship(back_populates="opportunity", cascade="all, delete-orphan")
+    actions: Mapped[list[OpportunityAction]] = relationship(back_populates="opportunity", cascade="all, delete-orphan")
+    bet_records: Mapped[list[BetRecord]] = relationship(back_populates="opportunity", cascade="all, delete-orphan")
 
 
 class ArbitrageLeg(Base):
@@ -179,6 +181,36 @@ class ArbitrageLeg(Base):
 
     opportunity: Mapped[ArbitrageOpportunity] = relationship(back_populates="legs")
     bookmaker: Mapped[Bookmaker] = relationship(back_populates="arbitrage_legs")
+
+
+class OpportunityAction(CreatedAtMixin, Base):
+    __tablename__ = "opportunity_actions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    opportunity_id: Mapped[int] = mapped_column(ForeignKey("arbitrage_opportunities.id", ondelete="CASCADE"), index=True)
+    action_type: Mapped[str] = mapped_column(String(32), index=True)
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    opportunity: Mapped[ArbitrageOpportunity] = relationship(back_populates="actions")
+
+
+class BetRecord(CreatedAtMixin, Base):
+    __tablename__ = "bet_records"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    opportunity_id: Mapped[int] = mapped_column(ForeignKey("arbitrage_opportunities.id", ondelete="CASCADE"), index=True)
+    bookmaker_id: Mapped[int] = mapped_column(ForeignKey("bookmakers.id", ondelete="CASCADE"), index=True)
+    outcome_name: Mapped[str] = mapped_column(String(255))
+    odds_taken: Mapped[Decimal] = mapped_column(Numeric(12, 4))
+    recommended_stake: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    actual_stake: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    result_status: Mapped[str] = mapped_column(String(32), default="PENDING", server_default="PENDING", index=True)
+    payout: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    profit_loss: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    opportunity: Mapped[ArbitrageOpportunity] = relationship(back_populates="bet_records")
+    bookmaker: Mapped[Bookmaker] = relationship()
 
 
 class ScanRun(Base):

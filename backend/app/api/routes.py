@@ -1,4 +1,6 @@
+from collections import defaultdict
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
@@ -15,10 +17,12 @@ from app.logging_utils import redact_secrets
 from app.models import (
     ArbitrageLeg,
     ArbitrageOpportunity,
+    BetRecord,
     Bookmaker,
     Event,
     MarketAlias,
     OddsSnapshot,
+    OpportunityAction,
     ScanRun,
     Sport,
     TeamAlias,
@@ -29,16 +33,22 @@ from app.schemas.odds import (
     ActiveArbitrageLegRead,
     ActiveArbitrageOpportunityRead,
     ArbitrageOpportunityRead,
+    BetRecordCreate,
+    BetRecordPatch,
+    BetRecordRead,
     BookmakerRead,
     EventRead,
     MarketAliasCreate,
     MarketAliasRead,
     OpportunityInstructionLegRead,
     OpportunityInstructionsRead,
+    OpportunityActionCreate,
+    OpportunityActionRead,
     SportRead,
     TeamAliasCreate,
     TeamAliasRead,
 )
+from app.schemas.dashboard import BookmakerPairMetricRead, DashboardMetricsRead, RecentActivityRead
 from app.schemas.scanner import ScanRunRead
 from app.services.health import get_health
 from app.services.normalization import canonical_sport_key, cleanup_key
@@ -53,6 +63,27 @@ from app.services.opportunity_validator import (
 from app.services.scanner import ScannerService
 
 router = APIRouter()
+
+SUPPORTED_ACTION_TYPES = {
+    "VIEWED",
+    "ACTIONED",
+    "SKIPPED",
+    "EXPIRED",
+    "ODDS_CHANGED",
+    "BET_REJECTED",
+    "WON",
+    "LOST",
+}
+MONEY_PRECISION = Decimal("0.01")
+PROBABILITY_PRECISION = Decimal("0.000001")
+REQUIRED_BET_RECORD_FIELDS = {
+    "bookmaker_id",
+    "outcome_name",
+    "odds_taken",
+    "recommended_stake",
+    "actual_stake",
+    "result_status",
+}
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -156,6 +187,11 @@ def list_events(db: Session = Depends(get_db)) -> list[Event]:
     return list(db.scalars(select(Event).order_by(Event.start_time)).all())
 
 
+@router.get("/dashboard/metrics", response_model=DashboardMetricsRead)
+def get_dashboard_metrics(db: Session = Depends(get_db)) -> DashboardMetricsRead:
+    return build_dashboard_metrics(db)
+
+
 @router.get("/opportunities", response_model=list[ArbitrageOpportunityRead])
 def list_opportunities(db: Session = Depends(get_db)) -> list[ArbitrageOpportunity]:
     query = (
@@ -227,9 +263,88 @@ def get_opportunity_instructions(
 def mark_opportunity_actioned(opportunity_id: int, db: Session = Depends(get_db)) -> ArbitrageOpportunity:
     opportunity = get_opportunity_with_details(opportunity_id, db)
     opportunity.status = "ACTIONED"
+    add_opportunity_action(db, opportunity_id=opportunity.id, action_type="ACTIONED", notes="Marked as actioned")
     db.commit()
     db.refresh(opportunity)
     return opportunity
+
+
+@router.post("/opportunities/{opportunity_id}/actions", response_model=OpportunityActionRead, status_code=201)
+def create_opportunity_action(
+    opportunity_id: int,
+    payload: OpportunityActionCreate,
+    db: Session = Depends(get_db),
+) -> OpportunityAction:
+    get_existing_opportunity(opportunity_id, db)
+    action = add_opportunity_action(
+        db,
+        opportunity_id=opportunity_id,
+        action_type=payload.action_type,
+        notes=payload.notes,
+    )
+    db.commit()
+    db.refresh(action)
+    return action
+
+
+@router.post("/opportunities/{opportunity_id}/bet-records", response_model=BetRecordRead, status_code=201)
+def create_bet_record(
+    opportunity_id: int,
+    payload: BetRecordCreate,
+    db: Session = Depends(get_db),
+) -> BetRecord:
+    get_existing_opportunity(opportunity_id, db)
+    get_existing_bookmaker(payload.bookmaker_id, db)
+    outcome_name = payload.outcome_name.strip()
+    if not outcome_name:
+        raise HTTPException(status_code=400, detail="Outcome name is required")
+
+    bet_record = BetRecord(
+        opportunity_id=opportunity_id,
+        bookmaker_id=payload.bookmaker_id,
+        outcome_name=outcome_name,
+        odds_taken=payload.odds_taken,
+        recommended_stake=payload.recommended_stake,
+        actual_stake=payload.actual_stake,
+        result_status=payload.result_status.strip().upper(),
+        payout=payload.payout,
+        profit_loss=payload.profit_loss,
+        settled_at=payload.settled_at,
+    )
+    db.add(bet_record)
+    db.commit()
+    db.refresh(bet_record)
+    return bet_record
+
+
+@router.patch("/bet-records/{bet_record_id}", response_model=BetRecordRead)
+def update_bet_record(
+    bet_record_id: int,
+    payload: BetRecordPatch,
+    db: Session = Depends(get_db),
+) -> BetRecord:
+    bet_record = db.get(BetRecord, bet_record_id)
+    if bet_record is None:
+        raise HTTPException(status_code=404, detail="Bet record not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "bookmaker_id" in updates and updates["bookmaker_id"] is not None:
+        get_existing_bookmaker(updates["bookmaker_id"], db)
+
+    for field, value in updates.items():
+        if field in REQUIRED_BET_RECORD_FIELDS and value is None:
+            raise HTTPException(status_code=400, detail=f"{field} cannot be null")
+        if field in {"outcome_name", "result_status"} and isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise HTTPException(status_code=400, detail=f"{field} is required")
+            if field == "result_status":
+                value = value.upper()
+        setattr(bet_record, field, value)
+
+    db.commit()
+    db.refresh(bet_record)
+    return bet_record
 
 
 @router.post("/jobs/fetch-odds", status_code=202)
@@ -265,6 +380,165 @@ def get_job_status(task_id: str) -> JobStatusRead:
         successful=task.successful(),
         error=redact_secrets(result) if task.failed() and result is not None else None,
     )
+
+
+def add_opportunity_action(
+    db: Session,
+    opportunity_id: int,
+    action_type: str,
+    notes: str | None = None,
+) -> OpportunityAction:
+    normalized_action_type = action_type.strip().upper()
+    if normalized_action_type not in SUPPORTED_ACTION_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported action type")
+
+    opportunity = get_existing_opportunity(opportunity_id, db)
+    if normalized_action_type == "ACTIONED":
+        opportunity.status = "ACTIONED"
+    elif normalized_action_type == "EXPIRED":
+        opportunity.status = "expired"
+
+    action = OpportunityAction(
+        opportunity_id=opportunity_id,
+        action_type=normalized_action_type,
+        notes=notes.strip() if notes else None,
+    )
+    db.add(action)
+    db.flush()
+    return action
+
+
+def get_existing_opportunity(opportunity_id: int, db: Session) -> ArbitrageOpportunity:
+    opportunity = db.get(ArbitrageOpportunity, opportunity_id)
+    if opportunity is None:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    return opportunity
+
+
+def get_existing_bookmaker(bookmaker_id: int, db: Session) -> Bookmaker:
+    bookmaker = db.get(Bookmaker, bookmaker_id)
+    if bookmaker is None:
+        raise HTTPException(status_code=404, detail="Bookmaker not found")
+    return bookmaker
+
+
+def build_dashboard_metrics(db: Session) -> DashboardMetricsRead:
+    opportunities = list(
+        db.scalars(
+            select(ArbitrageOpportunity).options(
+                selectinload(ArbitrageOpportunity.legs).selectinload(ArbitrageLeg.bookmaker)
+            )
+        ).all()
+    )
+    actions = list(db.scalars(select(OpportunityAction)).all())
+    bet_records = list(db.scalars(select(BetRecord)).all())
+    recent_actions = list(
+        db.scalars(select(OpportunityAction).order_by(OpportunityAction.created_at.desc()).limit(10)).all()
+    )
+
+    actioned_opportunity_ids = {
+        action.opportunity_id for action in actions if action.action_type == "ACTIONED"
+    } | {opportunity.id for opportunity in opportunities if opportunity.status == "ACTIONED"}
+    expired_opportunity_ids = {
+        action.opportunity_id for action in actions if action.action_type == "EXPIRED"
+    } | {
+        opportunity.id
+        for opportunity in opportunities
+        if opportunity.status == "expired" or opportunity.validation_status == "EXPIRED"
+    }
+
+    margins = [Decimal(str(opportunity.margin)) for opportunity in opportunities]
+    odds_ages = [
+        Decimal(str(odds_age))
+        for opportunity in opportunities
+        for odds_age in [extract_odds_age(opportunity)]
+        if odds_age is not None
+    ]
+
+    return DashboardMetricsRead(
+        total_opportunities_found=len(opportunities),
+        opportunities_actioned=len(actioned_opportunity_ids),
+        expired_before_action=len(expired_opportunity_ids - actioned_opportunity_ids),
+        total_recommended_profit=quantize_money(
+            sum((Decimal(str(opportunity.guaranteed_profit)) for opportunity in opportunities), Decimal("0"))
+        ),
+        actual_profit_loss=quantize_money(
+            sum(
+                (Decimal(str(record.profit_loss)) for record in bet_records if record.profit_loss is not None),
+                Decimal("0"),
+            )
+        ),
+        average_margin=average_decimal(margins, PROBABILITY_PRECISION),
+        average_odds_age=average_decimal(odds_ages, Decimal("0.01")),
+        best_bookmaker_pairs=build_bookmaker_pair_metrics(opportunities),
+        recent_activity=[
+            RecentActivityRead(
+                id=action.id,
+                opportunity_id=action.opportunity_id,
+                action_type=action.action_type,
+                notes=action.notes,
+                created_at=action.created_at,
+            )
+            for action in recent_actions
+        ],
+    )
+
+
+def build_bookmaker_pair_metrics(
+    opportunities: list[ArbitrageOpportunity],
+) -> list[BookmakerPairMetricRead]:
+    pair_metrics: dict[tuple[str, ...], dict[str, Decimal | int]] = defaultdict(
+        lambda: {"opportunities": 0, "total_recommended_profit": Decimal("0"), "margin_total": Decimal("0")}
+    )
+
+    for opportunity in opportunities:
+        bookmaker_names = tuple(
+            sorted({leg.bookmaker.name for leg in opportunity.legs if leg.bookmaker is not None})
+        )
+        if len(bookmaker_names) < 2:
+            continue
+
+        pair_metrics[bookmaker_names]["opportunities"] += 1
+        pair_metrics[bookmaker_names]["total_recommended_profit"] += Decimal(str(opportunity.guaranteed_profit))
+        pair_metrics[bookmaker_names]["margin_total"] += Decimal(str(opportunity.margin))
+
+    metrics = [
+        BookmakerPairMetricRead(
+            bookmaker_pair=list(bookmaker_pair),
+            opportunities=int(values["opportunities"]),
+            total_recommended_profit=quantize_money(Decimal(str(values["total_recommended_profit"]))),
+            average_margin=(Decimal(str(values["margin_total"])) / Decimal(str(values["opportunities"]))).quantize(
+                PROBABILITY_PRECISION,
+                rounding=ROUND_HALF_UP,
+            ),
+        )
+        for bookmaker_pair, values in pair_metrics.items()
+    ]
+    return sorted(
+        metrics,
+        key=lambda metric: (metric.opportunities, metric.total_recommended_profit),
+        reverse=True,
+    )[:5]
+
+
+def extract_odds_age(opportunity: ArbitrageOpportunity) -> int | float | str | None:
+    validation_reasons = opportunity.validation_reasons or {}
+    if not isinstance(validation_reasons, dict):
+        return None
+    odds_age = validation_reasons.get("odds_age_seconds")
+    if odds_age in ("", None):
+        return None
+    return odds_age if isinstance(odds_age, (int, float, str)) else None
+
+
+def average_decimal(values: list[Decimal], precision: Decimal) -> Decimal | None:
+    if not values:
+        return None
+    return (sum(values, Decimal("0")) / Decimal(str(len(values)))).quantize(precision, rounding=ROUND_HALF_UP)
+
+
+def quantize_money(value: Decimal) -> Decimal:
+    return value.quantize(MONEY_PRECISION, rounding=ROUND_HALF_UP)
 
 
 def build_active_opportunity_response(

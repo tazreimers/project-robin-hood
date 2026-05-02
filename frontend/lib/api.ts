@@ -18,6 +18,33 @@ export type ScanRun = {
   completed_at: string | null;
 };
 
+export type BookmakerPairMetric = {
+  bookmaker_pair: string[];
+  opportunities: number;
+  total_recommended_profit: string;
+  average_margin: string;
+};
+
+export type RecentActivity = {
+  id: number;
+  opportunity_id: number;
+  action_type: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type DashboardMetrics = {
+  total_opportunities_found: number;
+  opportunities_actioned: number;
+  expired_before_action: number;
+  total_recommended_profit: string;
+  actual_profit_loss: string;
+  average_margin: string | null;
+  average_odds_age: string | null;
+  best_bookmaker_pairs: BookmakerPairMetric[];
+  recent_activity: RecentActivity[];
+};
+
 export type EventRead = {
   id: number;
   home_team: string;
@@ -106,6 +133,41 @@ export type OpportunityInstructions = {
   warning: string;
 };
 
+export type OpportunityAction = {
+  id: number;
+  opportunity_id: number;
+  action_type: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type BetRecordPayload = {
+  bookmaker_id: number;
+  outcome_name: string;
+  odds_taken: string;
+  recommended_stake: string;
+  actual_stake: string;
+  result_status?: string;
+  payout?: string | null;
+  profit_loss?: string | null;
+  settled_at?: string | null;
+};
+
+export type BetRecord = {
+  id: number;
+  opportunity_id: number;
+  bookmaker_id: number;
+  outcome_name: string;
+  odds_taken: string;
+  recommended_stake: string;
+  actual_stake: string;
+  result_status: string;
+  payout: string | null;
+  profit_loss: string | null;
+  created_at: string;
+  settled_at: string | null;
+};
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -133,6 +195,10 @@ export function getScanRun(scanId: number) {
   return fetchJson<ScanRun>(`/scan-runs/${scanId}`);
 }
 
+export function getDashboardMetrics() {
+  return fetchJson<DashboardMetrics>("/dashboard/metrics");
+}
+
 export function getActiveOpportunities(includeStale = false) {
   const query = includeStale ? "?include_stale=true" : "";
   return fetchJson<ActiveArbitrageOpportunity[]>(`/opportunities/active${query}`);
@@ -142,8 +208,32 @@ export function getOpportunityInstructions(opportunityId: string) {
   return fetchJson<OpportunityInstructions>(`/opportunities/${opportunityId}/instructions`);
 }
 
+export function createOpportunityAction(opportunityId: string, actionType: string, notes?: string) {
+  return fetchJson<OpportunityAction>(`/opportunities/${opportunityId}/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action_type: actionType, notes: notes ?? null }),
+  });
+}
+
 export function markOpportunityActioned(opportunityId: string) {
   return fetchJson(`/opportunities/${opportunityId}/mark-actioned`, { method: "POST" });
+}
+
+export function createBetRecord(opportunityId: string, payload: BetRecordPayload) {
+  return fetchJson<BetRecord>(`/opportunities/${opportunityId}/bet-records`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateBetRecord(betRecordId: number, payload: Partial<BetRecordPayload>) {
+  return fetchJson<BetRecord>(`/bet-records/${betRecordId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 }
 
 export function formatDateTime(value: string | null) {

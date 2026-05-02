@@ -11,15 +11,25 @@ import {
   CircularProgress,
   Grid,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  formatMoney,
+  formatPercent,
   formatDateTime,
+  getDashboardMetrics,
   getHealth,
   getScanRun,
   getScanRuns,
+  type DashboardMetrics,
   type HealthResponse,
   type ScanRun,
   startScan,
@@ -30,6 +40,7 @@ const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeo
 export default function DashboardPage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [latestScan, setLatestScan] = useState<ScanRun | null>(null);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -40,9 +51,14 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const [healthResponse, scanRuns] = await Promise.all([getHealth(), getScanRuns()]);
+      const [healthResponse, scanRuns, metricsResponse] = await Promise.all([
+        getHealth(),
+        getScanRuns(),
+        getDashboardMetrics(),
+      ]);
       setHealth(healthResponse);
       setLatestScan(scanRuns[0] ?? null);
+      setMetrics(metricsResponse);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard");
     } finally {
@@ -75,6 +91,7 @@ export default function DashboardPage() {
       const run = await startScan();
       setLatestScan(run);
       await pollScanRun(run.scan_id);
+      setMetrics(await getDashboardMetrics());
     } catch (runError) {
       setScanError(runError instanceof Error ? runError.message : "Unable to start scan");
       setScanRunning(false);
@@ -164,7 +181,11 @@ export default function DashboardPage() {
           <SummaryCard label="Events processed" value={latestScan?.events_processed ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard label="Opportunities found" value={latestScan?.opportunities_found ?? 0} loading={loading} />
+          <SummaryCard
+            label="Total opportunities"
+            value={metrics?.total_opportunities_found ?? 0}
+            loading={loading}
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
@@ -172,6 +193,134 @@ export default function DashboardPage() {
             value={formatDateTime(latestScan?.completed_at ?? latestScan?.started_at ?? null)}
             loading={loading}
           />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Actioned"
+            value={metrics?.opportunities_actioned ?? 0}
+            loading={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Expired before action"
+            value={metrics?.expired_before_action ?? 0}
+            loading={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Recommended profit"
+            value={formatMoney(metrics?.total_recommended_profit ?? 0)}
+            loading={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Actual profit/loss"
+            value={formatMoney(metrics?.actual_profit_loss ?? 0)}
+            loading={loading}
+            tone={Number(metrics?.actual_profit_loss ?? 0) >= 0 ? "success.main" : "error.main"}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Average margin"
+            value={metrics?.average_margin ? formatPercent(metrics.average_margin) : "N/A"}
+            loading={loading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Average odds age"
+            value={metrics?.average_odds_age ? `${Number(metrics.average_odds_age).toFixed(1)}s` : "N/A"}
+            loading={loading}
+          />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Best bookmaker pairs
+              </Typography>
+              <TableContainer sx={{ mt: 1 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Pair</TableCell>
+                      <TableCell align="right">Opportunities</TableCell>
+                      <TableCell align="right">Profit</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {metrics?.best_bookmaker_pairs.length ? (
+                      metrics.best_bookmaker_pairs.map((pair) => (
+                        <TableRow key={pair.bookmaker_pair.join("-")}>
+                          <TableCell>{pair.bookmaker_pair.join(" + ")}</TableCell>
+                          <TableCell align="right">{pair.opportunities}</TableCell>
+                          <TableCell align="right">{formatMoney(pair.total_recommended_profit)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3}>
+                          <Typography color="text.secondary" sx={{ py: 1 }}>
+                            No bookmaker pair data yet.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Recent activity
+              </Typography>
+              <TableContainer sx={{ mt: 1 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Action</TableCell>
+                      <TableCell>Opportunity</TableCell>
+                      <TableCell>Notes</TableCell>
+                      <TableCell>Time</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {metrics?.recent_activity.length ? (
+                      metrics.recent_activity.map((activity) => (
+                        <TableRow key={activity.id}>
+                          <TableCell>
+                            <Chip size="small" label={activity.action_type} />
+                          </TableCell>
+                          <TableCell>#{activity.opportunity_id}</TableCell>
+                          <TableCell>{activity.notes ?? ""}</TableCell>
+                          <TableCell>{formatDateTime(activity.created_at)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4}>
+                          <Typography color="text.secondary" sx={{ py: 1 }}>
+                            No recent activity.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </Stack>
@@ -182,10 +331,12 @@ function SummaryCard({
   label,
   value,
   loading,
+  tone,
 }: {
   label: string;
   value: number | string;
   loading: boolean;
+  tone?: string;
 }) {
   return (
     <Card>
@@ -193,7 +344,7 @@ function SummaryCard({
         <Typography color="text.secondary" variant="body2">
           {label}
         </Typography>
-        <Typography variant="h4" sx={{ mt: 1, fontWeight: 700 }}>
+        <Typography variant="h4" sx={{ mt: 1, fontWeight: 700, color: tone }}>
           {loading ? <CircularProgress size={26} /> : value}
         </Typography>
       </CardContent>
