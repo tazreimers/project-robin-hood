@@ -10,6 +10,7 @@ import {
   Chip,
   CircularProgress,
   Grid,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanRunning, setScanRunning] = useState(false);
+  const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -73,6 +75,8 @@ export default function DashboardPage() {
 
       if (run.status !== "queued" && run.status !== "running") {
         setScanRunning(false);
+        setSnackbar(run.status === "completed" ? "Scan completed" : `Scan ${run.status}`);
+        await loadDashboard();
         return;
       }
 
@@ -81,11 +85,12 @@ export default function DashboardPage() {
 
     setScanRunning(false);
     setScanError("Scan is still running. Refresh the dashboard in a moment.");
-  }, []);
+  }, [loadDashboard]);
 
   const runScan = useCallback(async () => {
     setScanError(null);
     setScanRunning(true);
+    setSnackbar("Scan started");
 
     try {
       const run = await startScan();
@@ -100,6 +105,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void loadDashboard();
+    const refreshDashboard = () => {
+      void loadDashboard();
+    };
+    window.addEventListener("scan-completed", refreshDashboard);
+
+    return () => window.removeEventListener("scan-completed", refreshDashboard);
   }, [loadDashboard]);
 
   const healthChip = useMemo(() => {
@@ -117,15 +128,26 @@ export default function DashboardPage() {
   return (
     <Stack spacing={3}>
       <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+        <Typography variant="h5">
           Dashboard
         </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
           Current API status, latest scan results, and scanner controls.
         </Typography>
       </Box>
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error ? (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => void loadDashboard()}>
+              Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      ) : null}
       {scanError ? <Alert severity="error">{scanError}</Alert> : null}
 
       <Grid container spacing={2}>
@@ -323,6 +345,13 @@ export default function DashboardPage() {
           </Card>
         </Grid>
       </Grid>
+      <Snackbar
+        open={Boolean(snackbar)}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(null)}
+        message={snackbar ?? ""}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      />
     </Stack>
   );
 }
@@ -339,7 +368,7 @@ function SummaryCard({
   tone?: string;
 }) {
   return (
-    <Card>
+    <Card sx={{ height: "100%", "&:hover": { boxShadow: 4, transform: "translateY(-1px)" } }}>
       <CardContent>
         <Typography color="text.secondary" variant="body2">
           {label}

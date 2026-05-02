@@ -62,6 +62,25 @@ http://localhost:3000
 
 The dashboard can trigger a full scan, display the latest scan run, and show active opportunities.
 
+## Frontend UX
+
+The frontend uses a trading-dashboard layout with a fixed collapsible sidebar, sticky AppBar, and warm Robin Hood-inspired theme accents.
+
+Theme switching:
+
+- Use the sun/moon switch in the AppBar to toggle light and dark mode.
+- The selected theme is stored in browser `localStorage`.
+- Light mode uses a parchment background with forest green and gold accents.
+- Dark mode uses charcoal surfaces with bright green and muted gold accents.
+
+UX features:
+
+- AppBar scan controls with loading state and snackbar feedback.
+- Dashboard metric cards for scan health, opportunity performance, realized profit/loss, and recent activity.
+- Opportunities board powered by MUI DataGrid with sorting, filtering, column resizing, and pagination.
+- Auto-refresh controls with a 30-second countdown and row flash for newly detected opportunities.
+- Execution-focused opportunity detail screen with large odds, stake cards, copyable instructions, and a manual checklist.
+
 Check the API directly:
 
 ```bash
