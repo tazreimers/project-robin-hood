@@ -1,0 +1,189 @@
+Upgrade the frontend UX to a polished, production-quality interface using React + MUI.
+
+Design goals:
+- Clean, modern, minimal
+- Fast to scan (like a trading dashboard)
+- Robin Hood-inspired color accents (green trims, warm parchment/paper background)
+- Dark mode + light mode toggle
+- Emphasis on readability and quick decision-making
+
+---
+
+Theme system:
+
+Update frontend/theme.ts:
+
+Create TWO themes:
+1. Light theme:
+   - background: warm off-white / parchment (#F5F1E6 or similar)
+   - cards: white (#FFFFFF)
+   - primary: forest green (#2E7D32)
+   - secondary: gold accent (#C9A227)
+   - text: dark grey (#1C1C1C)
+
+2. Dark theme:
+   - background: deep charcoal (#121212)
+   - cards: #1E1E1E
+   - primary: bright green (#4CAF50)
+   - secondary: muted gold (#D4AF37)
+   - text: #EAEAEA
+
+Add a ThemeProvider with toggle:
+- store preference in localStorage
+- toggle switch in AppBar (sun/moon icon)
+
+---
+
+Layout improvements:
+
+Refactor layout to feel like a trading terminal:
+
+- Fixed sidebar (collapsible)
+- Main content area scrollable
+- Sticky top AppBar
+
+Sidebar:
+- icons + labels
+- active route highlight
+- smooth collapse animation
+
+AppBar:
+- title
+- theme toggle
+- last scan timestamp
+- "Run Scan" primary button (highlighted)
+
+---
+
+Typography:
+
+- Use clear hierarchy:
+  - H5 for page titles
+  - H6 for section headers
+  - body2 for metadata
+- Use monospaced font for odds and stake numbers
+
+---
+
+Opportunities table UX:
+
+Improve /opportunities page:
+
+- Use MUI DataGrid with:
+  - sorting
+  - filtering
+  - column resizing
+  - pagination
+
+Add visual cues:
+- margin:
+  - >3% → green chip
+  - 1–3% → amber chip
+  - <1% → red chip
+- freshness:
+  - fresh → green dot
+  - stale → grey
+  - risky → orange
+
+Row hover:
+- subtle highlight
+- pointer cursor
+
+Add quick actions:
+- "View"
+- "Copy bet instructions"
+
+---
+
+Opportunity detail UX:
+
+Make this feel like a “trade execution screen”
+
+- Top summary card:
+  - event
+  - margin (large)
+  - guaranteed profit (highlighted in green)
+  - total stake
+
+- Legs displayed as side-by-side cards:
+  - bookmaker logo (placeholder ok)
+  - outcome
+  - odds (very large font)
+  - stake
+  - expected return
+
+- Add visual balance:
+  - equal height cards
+  - divider between legs
+
+- Add “Execution checklist”:
+  - verify odds
+  - confirm stake
+  - confirm event/time
+
+- Add CTA button:
+  "Mark as Actioned" (primary green)
+
+---
+
+Micro-interactions:
+
+- Button hover elevation
+- Card hover shadow increase
+- Smooth transitions (150–250ms)
+- Snackbar notifications:
+  - scan started
+  - scan completed
+  - error states
+
+---
+
+Loading & empty states:
+
+- Skeleton loaders for tables
+- Friendly empty state:
+  "No arbitrage opportunities found"
+- Error state with retry button
+
+---
+
+Auto-refresh UX:
+
+- Add toggle: "Auto-refresh (30s)"
+- Show countdown timer
+- Flash updated rows when new opportunities appear
+
+---
+
+Scan UX:
+
+When "Run Scan" is clicked:
+- disable button
+- show spinner
+- show "Scanning…" in AppBar
+- show result via snackbar
+
+---
+
+Accessibility:
+
+- Ensure contrast ratios are good
+- Buttons have clear labels
+- Keyboard navigation works
+
+---
+
+Polish:
+
+- Consistent spacing using MUI spacing system
+- Rounded corners (8–12px)
+- Subtle shadows (not heavy)
+- Avoid clutter
+
+---
+
+README:
+
+Add section:
+- how to switch themes
+- UX features overview

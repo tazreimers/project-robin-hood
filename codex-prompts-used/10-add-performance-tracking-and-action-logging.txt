@@ -1,0 +1,54 @@
+Add performance tracking and action logging.
+
+Create models:
+
+OpportunityAction:
+- id
+- opportunity_id
+- action_type
+- notes
+- created_at
+
+Supported action types:
+- VIEWED
+- ACTIONED
+- SKIPPED
+- EXPIRED
+- ODDS_CHANGED
+- BET_REJECTED
+- WON
+- LOST
+
+BetRecord:
+- id
+- opportunity_id
+- bookmaker_id
+- outcome_name
+- odds_taken
+- recommended_stake
+- actual_stake
+- result_status
+- payout
+- profit_loss
+- created_at
+- settled_at
+
+Add endpoints:
+POST /opportunities/{id}/actions
+POST /opportunities/{id}/bet-records
+PATCH /bet-records/{id}
+
+Add dashboard metrics:
+- total opportunities found
+- opportunities actioned
+- expired before action
+- total recommended profit
+- actual profit/loss
+- average margin
+- average odds age
+- best bookmaker pairs
+
+Update frontend dashboard with metric cards and a recent activity table.
+
+Do not add automatic betting, login automation, captcha bypass, or bookmaker account control.
+This step is only for tracking what the user manually did.

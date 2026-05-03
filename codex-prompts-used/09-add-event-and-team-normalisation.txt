@@ -1,0 +1,50 @@
+Build a normalisation system for teams, events, and markets.
+
+Create models:
+TeamAlias:
+- id
+- sport_key
+- canonical_name
+- alias
+- created_at
+
+MarketAlias:
+- id
+- provider
+- source_market_name
+- canonical_market_type
+- created_at
+
+Create service:
+backend/app/services/normalization.py
+
+It should:
+- normalize team names
+- normalize event keys
+- normalize market names
+- match events across bookmakers/providers
+- produce a confidence score
+
+Use:
+- exact alias matching first
+- lowercase/trim/punctuation cleanup
+- fuzzy matching as fallback
+
+Add seed data for AFL teams:
+- Collingwood / Collingwood Magpies / Magpies / COL
+- Sydney / Sydney Swans / Swans / SYD
+- and the remaining AFL teams
+
+Add admin-style API endpoints:
+GET /aliases/teams
+POST /aliases/teams
+GET /aliases/markets
+POST /aliases/markets
+
+Update odds ingestion to use normalized team names and normalized_event_key.
+
+Add tests for:
+- exact team alias match
+- fuzzy alias match
+- two providers naming the same event differently
+- market alias normalization

@@ -1,0 +1,144 @@
+Refactor the frontend to use React with Material UI (MUI) and build a clean arbitrage dashboard.
+
+Requirements:
+- Use Next.js (App Router) with React
+- Install and use @mui/material, @mui/icons-material, @emotion/react, @emotion/styled
+- Use a dark theme by default
+- Create a responsive layout with a top AppBar and sidebar navigation
+
+Create a reusable layout:
+frontend/app/layout.tsx
+
+Layout should include:
+- AppBar with title: "Arbitrage Scanner"
+- Sidebar with navigation:
+  - Dashboard
+  - Opportunities
+  - Scan Runs
+
+Create a theme:
+frontend/theme.ts
+- dark mode
+- primary color: blue
+- secondary color: green
+
+---
+
+Dashboard page:
+/frontend/app/page.tsx
+
+Show:
+- API health status (green/red chip)
+- Button: "Run Scan Now" (calls POST /scan)
+- Summary cards:
+  - Events processed
+  - Opportunities found
+  - Last scan time
+
+Use MUI components:
+- Card
+- Grid
+- Button
+- Chip
+- Typography
+
+---
+
+Opportunities list page:
+/frontend/app/opportunities/page.tsx
+
+Fetch:
+GET /opportunities/active
+
+Display a table using MUI DataGrid (or Table if simpler):
+
+Columns:
+- Event (home vs away)
+- Market
+- Margin (%)
+- Guaranteed Profit
+- Start Time
+- Status (fresh/stale chip)
+- Action button: "View"
+
+Color rules:
+- margin > 3% → green
+- margin 1–3% → orange
+- <1% → red
+
+Rows should be clickable → navigate to detail page
+
+---
+
+Opportunity detail page:
+/frontend/app/opportunities/[id]/page.tsx
+
+Fetch:
+GET /opportunities/{id}/instructions
+
+Display:
+- Event title
+- Market
+- Margin
+- Guaranteed profit
+- Total stake
+
+For each leg:
+Show a Card:
+- Bookmaker name
+- Outcome to bet
+- Odds (large font)
+- Stake
+- Expected return
+
+Add warning banner:
+"Always verify odds before placing bets"
+
+Add button:
+"Mark as Actioned" → POST /opportunities/{id}/mark-actioned
+
+---
+
+Scan runs page:
+/frontend/app/scan-runs/page.tsx
+
+Fetch:
+GET /scan-runs
+
+Display table:
+- Scan ID
+- Status
+- Events processed
+- Opportunities found
+- Started at
+- Completed at
+
+---
+
+State management:
+- Use React hooks (useState, useEffect)
+- No Redux needed
+- Create a simple API helper file:
+frontend/lib/api.ts
+
+---
+
+UX details:
+- Show loading spinners during API calls
+- Show error alerts if API fails
+- Disable "Run Scan" button while running
+- Auto-refresh opportunities every 30 seconds
+
+---
+
+Styling:
+- Use MUI spacing system
+- Keep layout clean and minimal
+- Use Cards for grouping data
+- Use Chips for status indicators
+
+---
+
+README updates:
+- Add instructions to install MUI dependencies
+- Show how to run frontend

@@ -1,0 +1,65 @@
+Build a detailed opportunity view that gives manual bet instructions.
+
+Backend:
+Add endpoint:
+GET /opportunities/{id}/instructions
+
+Return:
+- event
+- market
+- line
+- total stake
+- guaranteed profit
+- guaranteed return
+- margin
+- legs
+- clear manual instructions
+
+Each leg should include:
+- bookmaker
+- outcome to bet on
+- decimal odds
+- stake
+- expected return
+- source last seen time
+- odds age in seconds
+
+Add a warning field:
+"Re-check odds manually before placing any bet. Do not place a bet if the odds have changed."
+
+Frontend:
+Create an opportunities page:
+/frontend/app/opportunities/page.tsx
+
+Show:
+- list of active opportunities
+- margin
+- guaranteed profit
+- event start time
+- freshness status
+- link to details
+
+Create detail page:
+/frontend/app/opportunities/[id]/page.tsx
+
+Show:
+- event name
+- market
+- recommended total stake
+- each bookmaker leg
+- exact stake per bookmaker
+- expected return
+- guaranteed profit
+- warning to manually verify odds
+
+Add a button:
+"Mark as actioned"
+
+Backend:
+Add endpoint:
+POST /opportunities/{id}/mark-actioned
+
+This should update status to ACTIONED.
+
+Do not add automatic betting or account login.
+This version is only for manual bet instructions.

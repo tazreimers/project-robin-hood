@@ -1,0 +1,37 @@
+  Make the recommended hardening and usability changes for this Dockerized FastAPI/Celery/Next.js odds scanner.
+
+  Scope:
+  1. Prevent Odds API keys from leaking into logs or provider errors.
+     - Add a backend helper to redact `apiKey=` query params.
+     - Suppress noisy `httpx` / `httpcore` request logging in both the FastAPI app and Celery worker.
+     - Use the redaction helper when wrapping provider HTTP errors.
+
+  2. Add a backend job status endpoint.
+     - Keep `POST /jobs/fetch-odds` as-is.
+     - Add `GET /jobs/{task_id}` that returns Celery task state, readiness, success flag, result when successful,
+  and a redacted error when failed.
+     - Add a Pydantic schema for the job status response.
+
+  3. Improve the frontend dashboard so it is actually usable.
+     - Keep the existing health/status view.
+     - Add a “Run scan” button that calls `POST /jobs/fetch-odds`.
+     - Poll `GET /jobs/{task_id}` until the job is ready.
+     - Show the latest scan status/result.
+     - Load and display `/events`.
+     - Load and display `/opportunities`.
+     - Keep the UI simple and consistent with the existing design.
+
+  4. Add a standard Next.js ESLint config so `npm run lint` is non-interactive.
+
+  5. Update README usage docs.
+     - Mention that the dashboard can trigger scans and show events/opportunities.
+     - Document `GET /jobs/{task_id}`.
+     - Include the curl command for checking a queued job.
+
+  Verification:
+  - Run backend syntax/import check.
+  - Run frontend lint.
+  - Run frontend production build.
+  - Restart affected Docker containers.
+  - Smoke check `http://localhost:8000/health`, the new job-status endpoint, and `http://localhost:3000`.
+  - Do not trigger another live odds scan unless needed, to avoid spending API quota.

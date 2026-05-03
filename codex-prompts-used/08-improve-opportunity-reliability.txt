@@ -1,0 +1,34 @@
+Add an opportunity reliability layer.
+
+Create backend/app/services/opportunity_validator.py
+
+For each arbitrage opportunity, calculate:
+- odds_age_seconds
+- event_start_minutes
+- market_consistency_score
+- event_matching_confidence
+- all_legs_available
+- recommended_status: FRESH, STALE, RISKY, EXPIRED
+
+Add fields to ArbitrageOpportunity:
+- reliability_score
+- validation_status
+- validation_reasons JSON
+- last_validated_at
+
+Rules:
+- stale if any leg odds are older than MAX_ODDS_AGE_SECONDS
+- risky if event starts within 10 minutes
+- risky if margin is below MIN_ARBITRAGE_MARGIN
+- expired if any required leg is missing
+- fresh only if all legs pass validation
+
+Update GET /opportunities/active to only return FRESH and RISKY opportunities by default.
+
+Add query param:
+GET /opportunities/active?include_stale=true
+
+Update frontend opportunities table to show:
+- reliability score
+- validation status chip
+- validation reasons tooltip or expandable row

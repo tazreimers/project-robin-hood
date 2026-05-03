@@ -1,0 +1,54 @@
+Add an arbitrage detection engine.
+
+Create:
+backend/app/services/arbitrage.py
+
+The engine should:
+- load current odds grouped by event_id, market_type, and line
+- compare all bookmakers for each market
+- find the best available odds for each outcome
+- calculate implied_probability_total as sum(1 / decimal_odds)
+- detect arbitrage when implied_probability_total < 1
+- calculate margin as 1 - implied_probability_total
+- calculate stake allocation for a configurable total stake
+- calculate guaranteed return and guaranteed profit
+- create ArbitrageOpportunity and ArbitrageLeg records
+
+Support:
+- two-way markets like AFL head-to-head
+- three-way markets like soccer win/draw/win
+
+Add config variables:
+DEFAULT_TOTAL_STAKE=1000
+MIN_ARBITRAGE_MARGIN=0.01
+MAX_ODDS_AGE_SECONDS=60
+
+Only use odds snapshots captured within MAX_ODDS_AGE_SECONDS.
+
+Add a Celery job:
+backend/app/jobs/detect_arbitrage.py
+
+Add API endpoint:
+POST /jobs/detect-arbitrage
+
+Add API endpoint:
+GET /opportunities/active
+
+The active opportunities endpoint should return:
+- event details
+- market type
+- line
+- implied probability total
+- margin
+- guaranteed profit
+- guaranteed return
+- legs with bookmaker, outcome, odds, stake, expected return
+- detected_at
+- freshness/staleness status
+
+Add tests for:
+- no arbitrage
+- two-way arbitrage
+- three-way arbitrage
+- stale odds ignored
+- minimum margin filter
