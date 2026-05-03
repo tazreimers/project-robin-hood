@@ -7,9 +7,9 @@ from decimal import Decimal
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.config import Settings
+from app.core.config import Settings
 from app.models import ArbitrageOpportunity, Base, ScanRun
-from app.services.providers import (
+from app.providers import (
     OddsProvider,
     ProviderBookmaker,
     ProviderEvent,

@@ -1,10 +1,10 @@
 import logging
 
-from app.config import get_settings
-from app.db import SessionLocal
+from app.core.config import get_settings
+from app.db.session import SessionLocal
 from app.jobs.celery_app import celery_app
 from app.services.odds_ingestion import OddsIngestionService
-from app.services.providers import OddsProviderConfigurationError
+from app.providers import OddsProviderConfigurationError
 
 logger = logging.getLogger(__name__)
 

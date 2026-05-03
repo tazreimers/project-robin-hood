@@ -22,13 +22,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  type ActiveArbitrageOpportunity,
   formatDateTime,
   formatMoney,
   formatPercent,
   getActiveOpportunities,
   getOpportunityInstructions,
 } from "../../lib/api";
+import type { ActiveArbitrageOpportunity } from "../../types/api";
 
 const refreshSeconds = 30;
 

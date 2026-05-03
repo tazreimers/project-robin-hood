@@ -5,11 +5,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.config import Settings, get_settings
+from app.core.config import Settings, get_settings
 from app.models import ScanRun
 from app.services.arbitrage import ArbitrageDetectionService
 from app.services.odds_ingestion import OddsIngestionService
-from app.services.providers import OddsProvider
+from app.providers import OddsProvider
 
 
 @dataclass(frozen=True)

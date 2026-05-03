@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import Settings, get_settings
+from app.core.config import Settings, get_settings
 from app.models import ArbitrageLeg, ArbitrageOpportunity, OddsSnapshot
 
 FRESH = "FRESH"

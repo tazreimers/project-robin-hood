@@ -9,7 +9,7 @@ from typing import Mapping
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.config import Settings, get_settings
+from app.core.config import Settings, get_settings
 from app.models import ArbitrageLeg, ArbitrageOpportunity, OddsSnapshot
 from app.services.opportunity_validator import OpportunityValidator
 

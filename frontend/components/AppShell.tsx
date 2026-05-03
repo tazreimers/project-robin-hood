@@ -36,8 +36,9 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { formatDateTime, getScanRun, getScanRuns, startScan, type ScanRun } from "../lib/api";
+import { formatDateTime, getScanRun, getScanRuns, startScan } from "../lib/api";
 import { darkTheme, lightTheme } from "../theme";
+import type { ScanRun } from "../types/api";
 
 const expandedDrawerWidth = 248;
 const collapsedDrawerWidth = 76;

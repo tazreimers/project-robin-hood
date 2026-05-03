@@ -1,0 +1,151 @@
+Create a clear developer guideline system for this repository.
+
+Add a root-level file:
+AGENTS.md
+
+The AGENTS.md should explain how developers and AI coding agents should work in this project.
+
+Include sections for:
+
+1. Project overview
+- This is an arbitrage odds scanner.
+- It ingests market odds from APIs/scrapers where permitted.
+- It detects arbitrage opportunities.
+- It displays manual bet instructions.
+- It does not automate betting, bookmaker login, captcha bypassing, KYC bypassing, geolocation bypassing, or responsible gambling bypassing.
+
+2. Tech stack
+- Backend: FastAPI, SQLAlchemy, Alembic, Celery, Redis, Postgres
+- Frontend: Next.js, React, MUI
+- Local dev: Docker Compose
+
+3. Repository structure
+
+Expected structure:
+
+backend/
+  app/
+    api/
+      routes/
+      dependencies.py
+    core/
+      config.py
+      logging.py
+      constants.py
+    db/
+      session.py
+      base.py
+    models/
+    schemas/
+    services/
+    jobs/
+    providers/
+    tests/
+  alembic/
+
+frontend/
+  app/
+  components/
+  features/
+  hooks/
+  lib/
+  theme/
+  types/
+
+docs/
+  architecture.md
+  data-model.md
+  api-contracts.md
+
+4. Backend conventions
+- API route handlers should be thin.
+- Business logic belongs in services.
+- External data integrations belong in providers.
+- Database models belong in models.
+- Pydantic request/response objects belong in schemas.
+- Celery tasks belong in jobs.
+- Shared config belongs in core/config.py.
+- Do not call external APIs directly from route handlers.
+- Do not put business logic in SQLAlchemy models.
+
+5. Frontend conventions
+- Use feature-based folders under frontend/features.
+- Shared UI components go in frontend/components.
+- API calls go in frontend/lib/api.ts.
+- TypeScript types go in frontend/types.
+- Theme files go in frontend/theme.
+- Avoid duplicating API-fetch logic inside pages.
+- Keep pages mostly as composition/layout components.
+
+6. Naming conventions
+- Backend files: snake_case.py
+- Backend classes: PascalCase
+- Backend functions: snake_case
+- Frontend components: PascalCase.tsx
+- Frontend hooks: useSomething.ts
+- Types/interfaces: PascalCase
+- Constants: UPPER_SNAKE_CASE
+
+7. Testing expectations
+- Add backend tests for services and API routes.
+- Add frontend tests for key UI components where practical.
+- Arbitrage math must always have unit tests.
+- Normalisation logic must always have unit tests.
+- Provider adapters should be tested with mocked responses.
+
+8. Safety and compliance boundaries
+Explicitly state:
+- Do not implement bookmaker login automation.
+- Do not implement automatic bet placement.
+- Do not bypass anti-bot systems.
+- Do not bypass captcha.
+- Do not bypass KYC, geolocation, age checks, self-exclusion, or responsible gambling controls.
+- Do not scrape sites in violation of their terms.
+- Prefer official APIs and permitted data feeds.
+
+9. Definition of done
+A change is done when:
+- it follows the folder structure
+- linting passes
+- relevant tests pass
+- README/docs are updated where needed
+- no safety/compliance boundary is violated
+
+10. Codex instructions
+Include clear instructions for future Codex runs:
+- Read AGENTS.md first.
+- Preserve existing architecture.
+- Prefer small focused changes.
+- Do not introduce new frameworks without justification.
+- Add tests with meaningful changes.
+- Update docs when changing architecture, data models, or API contracts.
+
+Then implement the structure cleanup to match AGENTS.md.
+
+Tasks:
+1. Create AGENTS.md at the repository root.
+2. Create docs/architecture.md explaining the current architecture.
+3. Create docs/data-model.md summarising the current tables/models.
+4. Create docs/api-contracts.md listing current backend endpoints.
+5. Refactor backend folders if necessary:
+   - move config/logging/constants into backend/app/core/
+   - move database setup into backend/app/db/
+   - ensure providers live under backend/app/providers/ or backend/app/services/providers/, but choose one and document it
+   - ensure routes live under backend/app/api/routes/
+6. Refactor frontend folders if necessary:
+   - shared components into frontend/components/
+   - API client into frontend/lib/api.ts
+   - theme files into frontend/theme/
+   - shared TypeScript types into frontend/types/
+   - feature-specific components into frontend/features/
+7. Update imports after any moves.
+8. Make sure Docker Compose still works.
+9. Make sure backend starts successfully.
+10. Make sure frontend builds successfully.
+11. Update README.md with:
+   - link to AGENTS.md
+   - project structure overview
+   - common development commands
+
+Do not change product behaviour in this task.
+This task is only for developer guidelines, folder structure, documentation, and import cleanup.

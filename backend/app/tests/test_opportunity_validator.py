@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.routes import list_active_opportunities
-from app.config import Settings
+from app.core.config import Settings
 from app.models import ArbitrageLeg, ArbitrageOpportunity, Base, Bookmaker, Event, OddsSnapshot, Sport
 from app.services.opportunity_validator import EXPIRED, FRESH, RISKY, STALE, OpportunityValidator
 

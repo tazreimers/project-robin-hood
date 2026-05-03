@@ -7,13 +7,18 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import get_settings
-from app.db import get_db
+from app.api.dependencies import get_db
+from app.core.config import get_settings
+from app.core.constants import (
+    MONEY_PRECISION,
+    PROBABILITY_PRECISION,
+    SUPPORTED_OPPORTUNITY_ACTION_TYPES,
+)
+from app.core.logging import redact_secrets
 from app.jobs.celery_app import celery_app
 from app.jobs.detect_arbitrage import detect_arbitrage as detect_arbitrage_job
 from app.jobs.fetch_odds import fetch_odds as fetch_odds_job
 from app.jobs.scan_now import scan_now as scan_now_job
-from app.logging_utils import redact_secrets
 from app.models import (
     ArbitrageLeg,
     ArbitrageOpportunity,
@@ -64,18 +69,6 @@ from app.services.scanner import ScannerService
 
 router = APIRouter()
 
-SUPPORTED_ACTION_TYPES = {
-    "VIEWED",
-    "ACTIONED",
-    "SKIPPED",
-    "EXPIRED",
-    "ODDS_CHANGED",
-    "BET_REJECTED",
-    "WON",
-    "LOST",
-}
-MONEY_PRECISION = Decimal("0.01")
-PROBABILITY_PRECISION = Decimal("0.000001")
 REQUIRED_BET_RECORD_FIELDS = {
     "bookmaker_id",
     "outcome_name",
@@ -389,7 +382,7 @@ def add_opportunity_action(
     notes: str | None = None,
 ) -> OpportunityAction:
     normalized_action_type = action_type.strip().upper()
-    if normalized_action_type not in SUPPORTED_ACTION_TYPES:
+    if normalized_action_type not in SUPPORTED_OPPORTUNITY_ACTION_TYPES:
         raise HTTPException(status_code=400, detail="Unsupported action type")
 
     opportunity = get_existing_opportunity(opportunity_id, db)

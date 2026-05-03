@@ -27,8 +27,8 @@ import {
   formatPercent,
   getOpportunityInstructions,
   markOpportunityActioned,
-  type OpportunityInstructions,
 } from "../../../lib/api";
+import type { OpportunityInstructions } from "../../../types/api";
 
 const checklistItems = ["Verify odds", "Confirm stake", "Confirm event/time"];
 

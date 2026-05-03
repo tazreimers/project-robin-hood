@@ -17,7 +17,8 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
-import { formatDateTime, getScanRuns, type ScanRun } from "../../lib/api";
+import { formatDateTime, getScanRuns } from "../../lib/api";
+import type { ScanRun } from "../../types/api";
 
 export default function ScanRunsPage() {
   const [scanRuns, setScanRuns] = useState<ScanRun[]>([]);

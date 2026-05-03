@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.models import Bookmaker, Event, Market, OddsSnapshot, Outcome, Sport
 from app.services.normalization import NormalizationService, NormalizedEvent, provider_key
-from app.services.providers import OddsProvider, ProviderBookmaker, ProviderEvent, ProviderMarket, ProviderSport
-from app.services.providers.the_odds_api import TheOddsApiProvider
+from app.providers import OddsProvider, ProviderBookmaker, ProviderEvent, ProviderMarket, ProviderSport
+from app.providers.the_odds_api import TheOddsApiProvider
 
 DECIMAL_ODDS_PRECISION = Decimal("0.0001")
 LINE_PRECISION = Decimal("0.0001")

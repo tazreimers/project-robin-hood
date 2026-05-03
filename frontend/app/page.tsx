@@ -30,11 +30,9 @@ import {
   getHealth,
   getScanRun,
   getScanRuns,
-  type DashboardMetrics,
-  type HealthResponse,
-  type ScanRun,
   startScan,
 } from "../lib/api";
+import type { DashboardMetrics, HealthResponse, ScanRun } from "../types/api";
 
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 

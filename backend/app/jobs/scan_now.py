@@ -1,6 +1,6 @@
 import logging
 
-from app.db import SessionLocal
+from app.db.session import SessionLocal
 from app.jobs.celery_app import celery_app
 from app.services.scanner import ScannerService
 

@@ -2,6 +2,16 @@
 
 A local MVP for an arbitrage betting scanner.
 
+## Developer Guidelines
+
+Read [AGENTS.md](AGENTS.md) before making repository changes. It defines the project architecture, safety boundaries, folder conventions, testing expectations, and Codex instructions.
+
+Architecture reference docs:
+
+- [Architecture](docs/architecture.md)
+- [Data model](docs/data-model.md)
+- [API contracts](docs/api-contracts.md)
+
 ## Stack
 
 - Backend: FastAPI
@@ -12,6 +22,41 @@ A local MVP for an arbitrage betting scanner.
 - Cache/queue: Redis
 - Frontend: Next.js
 - Local orchestration: Docker Compose
+
+## Project Structure
+
+```text
+backend/
+  app/
+    api/
+      routes/
+      dependencies.py
+    core/
+      config.py
+      logging.py
+      constants.py
+    db/
+      session.py
+      base.py
+    models/
+    schemas/
+    services/
+    jobs/
+    providers/
+    tests/
+  alembic/
+
+frontend/
+  app/
+  components/
+  features/
+  hooks/
+  lib/
+  theme/
+  types/
+
+docs/
+```
 
 ## Services
 
@@ -62,6 +107,35 @@ http://localhost:3000
 
 The dashboard can trigger a full scan, display the latest scan run, and show active opportunities.
 
+## Common Development Commands
+
+Full stack:
+
+```bash
+docker compose up --build
+docker compose down
+docker compose config
+```
+
+Backend:
+
+```bash
+cd backend
+alembic upgrade head
+uvicorn app.main:app --reload
+python -m unittest discover app/tests
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm run lint
+npm run build
+```
+
 ## Frontend UX
 
 The frontend uses a trading-dashboard layout with a fixed collapsible sidebar, sticky AppBar, and warm Robin Hood-inspired theme accents.
@@ -93,14 +167,23 @@ Core read endpoints:
 GET /bookmakers
 GET /sports
 GET /events
+GET /dashboard/metrics
+GET /aliases/teams
+POST /aliases/teams
+GET /aliases/markets
+POST /aliases/markets
 POST /scan
 GET /scan-runs
 GET /scan-runs/{id}
 GET /opportunities
 GET /opportunities/active
+GET /opportunities/active?include_stale=true
 GET /opportunities/{id}
 GET /opportunities/{id}/instructions
 POST /opportunities/{id}/mark-actioned
+POST /opportunities/{id}/actions
+POST /opportunities/{id}/bet-records
+PATCH /bet-records/{id}
 POST /jobs/fetch-odds
 POST /jobs/detect-arbitrage
 GET /jobs/{task_id}

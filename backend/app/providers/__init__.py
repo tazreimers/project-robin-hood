@@ -1,4 +1,4 @@
-from app.services.providers.base import (
+from app.providers.base import (
     OddsProvider,
     OddsProviderConfigurationError,
     OddsProviderError,
@@ -8,7 +8,7 @@ from app.services.providers.base import (
     ProviderOutcome,
     ProviderSport,
 )
-from app.services.providers.the_odds_api import TheOddsApiProvider
+from app.providers.the_odds_api import TheOddsApiProvider
 
 __all__ = [
     "OddsProvider",

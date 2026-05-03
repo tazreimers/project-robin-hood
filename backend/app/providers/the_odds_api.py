@@ -6,9 +6,9 @@ from typing import Any
 
 import httpx
 
-from app.config import Settings, get_settings
-from app.logging_utils import redact_secrets
-from app.services.providers.base import (
+from app.core.config import Settings, get_settings
+from app.core.logging import redact_secrets
+from app.providers.base import (
     OddsProvider,
     OddsProviderConfigurationError,
     OddsProviderError,

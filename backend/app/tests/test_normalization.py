@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.models import Base, Event, MarketAlias, OddsSnapshot, TeamAlias
 from app.services.normalization import NormalizationService
 from app.services.odds_ingestion import OddsIngestionService
-from app.services.providers import (
+from app.providers import (
     OddsProvider,
     ProviderBookmaker,
     ProviderEvent,

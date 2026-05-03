@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import MarketAlias, TeamAlias
-from app.services.providers.base import ProviderEvent
+from app.providers.base import ProviderEvent
 
 TEAM_FUZZY_THRESHOLD = 0.82
 MARKET_FUZZY_THRESHOLD = 0.82
