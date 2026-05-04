@@ -38,14 +38,21 @@ Run:
 ```bash
 ./scripts/test.sh
 ./scripts/lint.sh
+./scripts/format.sh
 ```
 
 For frontend structure changes, also run:
 
 ```bash
 cd frontend
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
 npm run build
 ```
+
+Frontend ESLint and Prettier rules are aligned with `anvil/UI`. Keep changes compatible with `frontend/eslint.config.mjs`, `frontend/.prettierrc.cjs`, and `frontend/.prettierignore`.
 
 ## Safety Checklist
 

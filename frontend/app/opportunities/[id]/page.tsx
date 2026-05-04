@@ -133,7 +133,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
       for (const executionLeg of savedExecution.legs) {
         const instructionLeg = instructions.legs.find(
-          (leg) => leg.bookmaker.id === executionLeg.bookmaker_id && leg.outcome_name === executionLeg.outcome_name,
+          (leg) => leg.bookmaker.id === executionLeg.bookmaker_id && leg.outcome_name === executionLeg.outcome_name
         );
         if (!instructionLeg) {
           continue;
@@ -211,11 +211,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
         }}
       >
         <CardContent>
-          <Stack
-            direction={{ xs: "column", lg: "row" }}
-            spacing={3}
-            sx={{ justifyContent: "space-between", alignItems: { xs: "stretch", lg: "center" } }}
-          >
+          <Stack direction={{ xs: "column", lg: "row" }} spacing={3} sx={{ justifyContent: "space-between", alignItems: { xs: "stretch", lg: "center" } }}>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="h5">
                 {instructions.event.home_team} vs {instructions.event.away_team}
@@ -238,20 +234,12 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
       <Card sx={{ border: 1, borderColor: "divider" }}>
         <CardContent>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            sx={{ alignItems: { xs: "stretch", md: "flex-start" }, justifyContent: "space-between" }}
-          >
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: { xs: "stretch", md: "flex-start" }, justifyContent: "space-between" }}>
             <Box sx={{ minWidth: 0 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }} useFlexGap>
                 <Typography variant="h6">Market quality</Typography>
                 {instructions.quality_check ? (
-                  <Chip
-                    size="small"
-                    label={instructions.quality_check.status}
-                    color={qualityColor(instructions.quality_check.status)}
-                  />
+                  <Chip size="small" label={instructions.quality_check.status} color={qualityColor(instructions.quality_check.status)} />
                 ) : (
                   <Chip size="small" label="RISKY" color="warning" />
                 )}
@@ -266,11 +254,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             </Box>
             <Metric
               label="Confidence"
-              value={
-                instructions.quality_check
-                  ? `${(Number(instructions.quality_check.confidence_score) * 100).toFixed(0)}%`
-                  : "N/A"
-              }
+              value={instructions.quality_check ? `${(Number(instructions.quality_check.confidence_score) * 100).toFixed(0)}%` : "N/A"}
               emphasis
             />
           </Stack>
@@ -291,9 +275,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
               <CardContent>
                 <Stack spacing={2.25} sx={{ height: "100%" }}>
                   <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                    <Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontWeight: 800 }}>
-                      {leg.bookmaker.name.slice(0, 1)}
-                    </Avatar>
+                    <Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontWeight: 800 }}>{leg.bookmaker.name.slice(0, 1)}</Avatar>
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="h6" noWrap>
                         {leg.bookmaker.name}
@@ -302,12 +284,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                         {leg.outcome_name}
                       </Typography>
                     </Box>
-                    <Chip
-                      size="small"
-                      label={leg.freshness_status}
-                      color={qualityColor(leg.freshness_status)}
-                      sx={{ ml: "auto" }}
-                    />
+                    <Chip size="small" label={leg.freshness_status} color={qualityColor(leg.freshness_status)} sx={{ ml: "auto" }} />
                   </Stack>
 
                   <Divider />
@@ -316,10 +293,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                     <Typography color="text.secondary" variant="body2">
                       Odds
                     </Typography>
-                    <Typography
-                      color="primary.main"
-                      sx={{ mt: 0.5, fontSize: { xs: 44, md: 52 }, fontFamily: "monospace", fontWeight: 900 }}
-                    >
+                    <Typography color="primary.main" sx={{ mt: 0.5, fontSize: { xs: 44, md: 52 }, fontFamily: "monospace", fontWeight: 900 }}>
                       {leg.decimal_odds}
                     </Typography>
                   </Box>
@@ -337,19 +311,13 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                       <Typography color="text.secondary" variant="body2">
                         Return
                       </Typography>
-                      <Typography sx={{ fontFamily: "monospace", fontWeight: 800 }}>
-                        {formatMoney(leg.expected_return)}
-                      </Typography>
+                      <Typography sx={{ fontFamily: "monospace", fontWeight: 800 }}>{formatMoney(leg.expected_return)}</Typography>
                     </Box>
                   </Stack>
                   <Typography color="text.secondary" variant="body2">
                     Freshness: {leg.odds_age_seconds === null ? "unknown" : `${leg.odds_age_seconds}s old`}
                   </Typography>
-                  <ExecutionLegFields
-                    draft={legDrafts[leg.id] ?? defaultLegDraft(leg)}
-                    legId={leg.id}
-                    onChange={updateLegDraft}
-                  />
+                  <ExecutionLegFields draft={legDrafts[leg.id] ?? defaultLegDraft(leg)} legId={leg.id} onChange={updateLegDraft} />
                 </Stack>
               </CardContent>
             </Card>
@@ -359,11 +327,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
       <Card sx={{ border: 1, borderColor: "divider" }}>
         <CardContent>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            sx={{ alignItems: { xs: "stretch", md: "center" }, justifyContent: "space-between" }}
-          >
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: { xs: "stretch", md: "center" }, justifyContent: "space-between" }}>
             <Box>
               <Typography variant="h6">Execution checklist</Typography>
               <InfoTooltip title="Record what you actually saw and did manually. This does not place bets or control bookmaker accounts." />
@@ -443,13 +407,8 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   );
 }
 
-function buildLegDrafts(
-  instructions: OpportunityInstructions,
-  execution: OpportunityExecution | null,
-): Record<number, LegDraft> {
-  const executionLegs = new Map(
-    (execution?.legs ?? []).map((leg) => [`${leg.bookmaker_id}:${leg.outcome_name}`, leg] as const),
-  );
+function buildLegDrafts(instructions: OpportunityInstructions, execution: OpportunityExecution | null): Record<number, LegDraft> {
+  const executionLegs = new Map((execution?.legs ?? []).map((leg) => [`${leg.bookmaker_id}:${leg.outcome_name}`, leg] as const));
 
   return Object.fromEntries(
     instructions.legs.map((leg) => {
@@ -463,7 +422,7 @@ function buildLegDrafts(
           notes: executionLeg?.notes ?? "",
         },
       ];
-    }),
+    })
   );
 }
 
@@ -571,17 +530,7 @@ function ExecutionLegFields({
   );
 }
 
-function Metric({
-  label,
-  value,
-  emphasis = false,
-  success = false,
-}: {
-  label: string;
-  value: string;
-  emphasis?: boolean;
-  success?: boolean;
-}) {
+function Metric({ label, value, emphasis = false, success = false }: { label: string; value: string; emphasis?: boolean; success?: boolean }) {
   return (
     <Box sx={{ minWidth: 140 }}>
       <Typography color="text.secondary" variant="body2">

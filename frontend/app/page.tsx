@@ -78,24 +78,27 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const pollScanRun = useCallback(async (scanId: number) => {
-    for (let attempt = 0; attempt < 60; attempt += 1) {
-      const run = await getScanRun(scanId);
-      setLatestScan(run);
+  const pollScanRun = useCallback(
+    async (scanId: number) => {
+      for (let attempt = 0; attempt < 60; attempt += 1) {
+        const run = await getScanRun(scanId);
+        setLatestScan(run);
 
-      if (run.status !== "queued" && run.status !== "running") {
-        setScanRunning(false);
-        setSnackbar(run.status === "completed" ? "Scan completed" : `Scan ${run.status}`);
-        await loadDashboard();
-        return;
+        if (run.status !== "queued" && run.status !== "running") {
+          setScanRunning(false);
+          setSnackbar(run.status === "completed" ? "Scan completed" : `Scan ${run.status}`);
+          await loadDashboard();
+          return;
+        }
+
+        await delay(2000);
       }
 
-      await delay(2000);
-    }
-
-    setScanRunning(false);
-    setScanError("Scan is still running. Refresh the dashboard in a moment.");
-  }, [loadDashboard]);
+      setScanRunning(false);
+      setScanError("Scan is still running. Refresh the dashboard in a moment.");
+    },
+    [loadDashboard]
+  );
 
   const runScan = useCallback(async () => {
     setScanError(null);
@@ -144,30 +147,23 @@ export default function DashboardPage() {
   const quotaIsLow = estimatedScansRemaining !== null && estimatedScansRemaining <= 1;
   const urgentEvents = scanPriorities.filter((priority) => priority.priority_level === "URGENT").length;
   const highPriorityEvents = scanPriorities.filter((priority) => priority.priority_level === "HIGH").length;
-  const nextScheduledScan = scanPriorities
-    .map((priority) => priority.next_scan_at)
-    .filter((value): value is string => Boolean(value))
-    .sort()[0] ?? null;
+  const nextScheduledScan =
+    scanPriorities
+      .map((priority) => priority.next_scan_at)
+      .filter((value): value is string => Boolean(value))
+      .sort()[0] ?? null;
   const demoDataDetected = Boolean(apiUsage?.usage_logs.some((log) => log.endpoint === "demo_seed"));
 
   return (
     <Stack spacing={3}>
       <PageHeader title="Dashboard" description="Current API status, latest scan results, and scanner controls." />
 
-      {error ? (
-        <ErrorState message={error} onRetry={() => void loadDashboard()} />
-      ) : null}
+      {error ? <ErrorState message={error} onRetry={() => void loadDashboard()} /> : null}
       {scanError ? <Alert severity="error">{scanError}</Alert> : null}
       {demoDataDetected ? (
-        <Alert severity="info">
-          Demo data is loaded. Live odds will only appear after configuring `ODDS_API_KEY` and running a scan.
-        </Alert>
+        <Alert severity="info">Demo data is loaded. Live odds will only appear after configuring `ODDS_API_KEY` and running a scan.</Alert>
       ) : null}
-      {quotaIsLow ? (
-        <Alert severity="warning">
-          API quota is low. New scans may be blocked to preserve the configured quota buffer.
-        </Alert>
-      ) : null}
+      {quotaIsLow ? <Alert severity="warning">API quota is low. New scans may be blocked to preserve the configured quota buffer.</Alert> : null}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -191,11 +187,7 @@ export default function DashboardPage() {
         <Grid size={{ xs: 12, md: 8 }}>
           <Card>
             <CardContent>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                sx={{ alignItems: { xs: "stretch", sm: "center" }, justifyContent: "space-between" }}
-              >
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { xs: "stretch", sm: "center" }, justifyContent: "space-between" }}>
                 <Box>
                   <Typography color="text.secondary" variant="body2">
                     Scanner
@@ -263,11 +255,7 @@ export default function DashboardPage() {
                   <QuotaMetric label="High priority" value={highPriorityEvents} loading={loading} />
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
-                  <QuotaMetric
-                    label="Next scheduled scan"
-                    value={nextScheduledScan ? formatDateTime(nextScheduledScan) : "Not scheduled"}
-                    loading={loading}
-                  />
+                  <QuotaMetric label="Next scheduled scan" value={nextScheduledScan ? formatDateTime(nextScheduledScan) : "Not scheduled"} loading={loading} />
                 </Grid>
               </Grid>
             </CardContent>
@@ -278,47 +266,22 @@ export default function DashboardPage() {
           <MetricCard label="Events processed" value={latestScan?.events_processed ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Total opportunities"
-            value={metrics?.total_opportunities_found ?? 0}
-            loading={loading}
-          />
+          <MetricCard label="Total opportunities" value={metrics?.total_opportunities_found ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Last scan time"
-            value={formatDateTime(latestScan?.completed_at ?? latestScan?.started_at ?? null)}
-            loading={loading}
-          />
+          <MetricCard label="Last scan time" value={formatDateTime(latestScan?.completed_at ?? latestScan?.started_at ?? null)} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Actioned"
-            value={metrics?.opportunities_actioned ?? 0}
-            loading={loading}
-          />
+          <MetricCard label="Actioned" value={metrics?.opportunities_actioned ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Expired before action"
-            value={metrics?.expired_before_action ?? 0}
-            loading={loading}
-          />
+          <MetricCard label="Expired before action" value={metrics?.expired_before_action ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Recommended profit"
-            value={formatMoney(metrics?.total_recommended_profit ?? 0)}
-            loading={loading}
-          />
+          <MetricCard label="Recommended profit" value={formatMoney(metrics?.total_recommended_profit ?? 0)} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Expected profit"
-            value={formatMoney(metrics?.expected_profit ?? 0)}
-            loading={loading}
-            tone="success.main"
-          />
+          <MetricCard label="Expected profit" value={formatMoney(metrics?.expected_profit ?? 0)} loading={loading} tone="success.main" />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <MetricCard
@@ -345,18 +308,10 @@ export default function DashboardPage() {
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Skipped"
-            value={metrics?.skipped_opportunities ?? 0}
-            loading={loading}
-          />
+          <MetricCard label="Skipped" value={metrics?.skipped_opportunities ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <MetricCard
-            label="Average margin"
-            value={metrics?.average_margin ? formatPercent(metrics.average_margin) : "N/A"}
-            loading={loading}
-          />
+          <MetricCard label="Average margin" value={metrics?.average_margin ? formatPercent(metrics.average_margin) : "N/A"} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <MetricCard
@@ -462,17 +417,7 @@ export default function DashboardPage() {
   );
 }
 
-function QuotaMetric({
-  label,
-  value,
-  loading,
-  tone,
-}: {
-  label: string;
-  value: number | string | null | undefined;
-  loading: boolean;
-  tone?: string;
-}) {
+function QuotaMetric({ label, value, loading, tone }: { label: string; value: number | string | null | undefined; loading: boolean; tone?: string }) {
   return (
     <Box>
       <Typography color="text.secondary" variant="caption">

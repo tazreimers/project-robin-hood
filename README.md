@@ -54,6 +54,18 @@ make seed       # seed local demo data
 make docs       # print key docs
 ```
 
+Frontend code quality commands:
+
+```bash
+cd frontend
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+```
+
+The frontend ESLint and Prettier rules are aligned with the sibling `anvil/UI` project. ESLint uses `frontend/eslint.config.mjs`; Prettier uses `frontend/.prettierrc.cjs` and `frontend/.prettierignore`.
+
 ## Folder Structure
 
 ```text

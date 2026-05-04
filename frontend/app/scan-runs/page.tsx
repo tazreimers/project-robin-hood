@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from "@mui/material";
+import { Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import { formatDateTime, getScanRuns } from "../../lib/api";
@@ -70,10 +61,7 @@ export default function ScanRunsPage() {
             ) : scanRuns.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6}>
-                  <EmptyState
-                    title="No scan runs yet"
-                    message="Start your first scan from the dashboard or the top bar."
-                  />
+                  <EmptyState title="No scan runs yet" message="Start your first scan from the dashboard or the top bar." />
                 </TableCell>
               </TableRow>
             ) : (

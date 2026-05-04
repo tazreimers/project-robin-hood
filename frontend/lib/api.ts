@@ -58,6 +58,8 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
     throw new Error(`API returned ${response.status}`);
   }
 
+  // The typed API helpers define the expected response shape at this fetch boundary.
+  // eslint-disable-next-line no-type-assertion/no-type-assertion
   return (await response.json()) as T;
 }
 

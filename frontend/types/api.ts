@@ -224,13 +224,7 @@ export type OpportunityAction = {
   created_at: string;
 };
 
-export type OpportunityExecutionStatus =
-  | "PLANNED"
-  | "ACTIONED"
-  | "PARTIALLY_ACTIONED"
-  | "ODDS_CHANGED"
-  | "SKIPPED"
-  | "SETTLED";
+export type OpportunityExecutionStatus = "PLANNED" | "ACTIONED" | "PARTIALLY_ACTIONED" | "ODDS_CHANGED" | "SKIPPED" | "SETTLED";
 
 export type ExecutionLegStatus = "PLANNED" | "PLACED" | "SKIPPED" | "ODDS_CHANGED";
 

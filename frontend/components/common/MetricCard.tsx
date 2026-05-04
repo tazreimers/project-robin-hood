@@ -1,16 +1,6 @@
 import { Card, CardContent, CircularProgress, Typography } from "@mui/material";
 
-export default function MetricCard({
-  label,
-  value,
-  loading,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  loading?: boolean;
-  tone?: string;
-}) {
+export default function MetricCard({ label, value, loading, tone }: { label: string; value: number | string; loading?: boolean; tone?: string }) {
   return (
     <Card sx={{ height: "100%", "&:hover": { boxShadow: 4, transform: "translateY(-1px)" } }}>
       <CardContent>

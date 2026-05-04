@@ -9,20 +9,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutlineOutlined";
 import HistoryIcon from "@mui/icons-material/History";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import {
-  Box,
-  Divider,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Stack,
-  Toolbar,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Box, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -39,15 +26,7 @@ const navItems = [
   { label: "Help", href: "/help", icon: <HelpOutlineIcon /> },
 ];
 
-export default function AppSidebar({
-  open,
-  width,
-  onToggle,
-}: {
-  open: boolean;
-  width: number;
-  onToggle: () => void;
-}) {
+export default function AppSidebar({ open, width, onToggle }: { open: boolean; width: number; onToggle: () => void }) {
   const pathname = usePathname();
 
   return (
@@ -122,9 +101,7 @@ export default function AppSidebar({
                     }}
                   >
                     <ListItemIcon sx={{ minWidth: open ? 40 : 0, color: "inherit" }}>{item.icon}</ListItemIcon>
-                    {open ? (
-                      <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontWeight: 700 } } }} />
-                    ) : null}
+                    {open ? <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontWeight: 700 } } }} /> : null}
                   </ListItemButton>
                 </Tooltip>
               );
@@ -134,11 +111,7 @@ export default function AppSidebar({
           <Divider />
           <Box sx={{ p: 1 }}>
             <Tooltip title={open ? "Collapse sidebar" : "Expand sidebar"} placement="right">
-              <IconButton
-                aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-                onClick={onToggle}
-                sx={{ width: "100%", borderRadius: 2 }}
-              >
+              <IconButton aria-label={open ? "Collapse sidebar" : "Expand sidebar"} onClick={onToggle} sx={{ width: "100%", borderRadius: 2 }}>
                 {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
               </IconButton>
             </Tooltip>

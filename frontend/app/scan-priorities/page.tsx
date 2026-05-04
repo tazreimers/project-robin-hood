@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from "@mui/material";
+import { Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import { formatDateTime, getScanPriorities } from "../../lib/api";
@@ -69,10 +60,7 @@ export default function ScanPrioritiesPage() {
             ) : priorities.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <EmptyState
-                    title="No scan priorities scheduled"
-                    message="Run a scan or seed demo data to create upcoming events with adaptive schedules."
-                  />
+                  <EmptyState title="No scan priorities scheduled" message="Run a scan or seed demo data to create upcoming events with adaptive schedules." />
                 </TableCell>
               </TableRow>
             ) : (

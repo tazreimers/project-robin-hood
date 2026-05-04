@@ -3,8 +3,7 @@ import { createTheme } from "@mui/material/styles";
 import { darkPalette, lightPalette } from "./palette";
 
 const baseTypography = {
-  fontFamily:
-    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   h5: {
     fontWeight: 700,
     letterSpacing: 0,

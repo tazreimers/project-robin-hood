@@ -12,8 +12,11 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     }
 
     try {
+      // localStorage has no schema at runtime; the hook caller owns the value contract for its key.
+      // eslint-disable-next-line no-type-assertion/no-type-assertion
       setValue(JSON.parse(storedValue) as T);
     } catch {
+      // eslint-disable-next-line no-type-assertion/no-type-assertion
       setValue(storedValue as T);
     }
   }, [key]);
@@ -26,7 +29,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         return resolvedValue;
       });
     },
-    [key],
+    [key]
   );
 
   return [value, updateValue] as const;

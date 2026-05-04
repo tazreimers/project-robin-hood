@@ -1,0 +1,14 @@
+**/_archived/
+README.md
+**/*.d.ts
+**/*.d.tsx
+**/*.test.ts
+**/*.test.tsx
+node_modules/
+.next/
+out/
+build/
+coverage/
+dist/
+*.tsbuildinfo
+package-lock.json

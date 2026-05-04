@@ -2,30 +2,12 @@
 
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import {
-  Box,
-  Button,
-  Chip,
-  FormControlLabel,
-  LinearProgress,
-  Paper,
-  Snackbar,
-  Stack,
-  Switch,
-  Tooltip,
-  Typography,
-} from "@mui/material";
-import { DataGrid, type GridColDef, type GridRenderCellParams, type GridRowClassNameParams } from "@mui/x-data-grid";
+import { Box, Button, Chip, FormControlLabel, LinearProgress, Paper, Snackbar, Stack, Switch, Tooltip, Typography } from "@mui/material";
+import { DataGrid, type GridColDef, type GridRenderCellParams, type GridRowClassNameParams, type GridRowParams } from "@mui/x-data-grid";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  formatDateTime,
-  formatMoney,
-  formatPercent,
-  getActiveOpportunities,
-  getOpportunityInstructions,
-} from "../../lib/api";
+import { formatDateTime, formatMoney, formatPercent, getActiveOpportunities, getOpportunityInstructions } from "../../lib/api";
 import type { ActiveArbitrageOpportunity } from "../../types/api";
 import EmptyState from "../../components/common/EmptyState";
 import ErrorState from "../../components/common/ErrorState";
@@ -59,9 +41,7 @@ export default function OpportunitiesPage() {
       try {
         const data = await getActiveOpportunities(includeStale);
         const nextIds = new Set(data.map((opportunity) => opportunity.id));
-        const newIds = data
-          .map((opportunity) => opportunity.id)
-          .filter((id) => previousIds.current.size > 0 && !previousIds.current.has(id));
+        const newIds = data.map((opportunity) => opportunity.id).filter((id) => previousIds.current.size > 0 && !previousIds.current.has(id));
         previousIds.current = nextIds;
         setOpportunities(data);
         setCountdown(refreshSeconds);
@@ -77,7 +57,7 @@ export default function OpportunitiesPage() {
         setRefreshing(false);
       }
     },
-    [includeStale],
+    [includeStale]
   );
 
   useEffect(() => {
@@ -151,7 +131,9 @@ export default function OpportunitiesPage() {
         field: "market_type",
         headerName: "Market",
         width: 120,
-        renderCell: (params) => <Chip size="small" label={params.value} variant="outlined" />,
+        renderCell: (params: GridRenderCellParams<ActiveArbitrageOpportunity, string>) => (
+          <Chip size="small" label={params.row.market_type} variant="outlined" />
+        ),
       },
       {
         field: "margin",
@@ -165,11 +147,7 @@ export default function OpportunitiesPage() {
         type: "number",
         valueGetter: (value) => Number(value),
         renderCell: (params: GridRenderCellParams<ActiveArbitrageOpportunity, number>) => (
-          <Chip
-            size="small"
-            label={formatPercent(String(params.value ?? 0))}
-            color={marginColor(Number(params.value ?? 0))}
-          />
+          <Chip size="small" label={formatPercent(String(params.value ?? 0))} color={marginColor(Number(params.value ?? 0))} />
         ),
       },
       {
@@ -262,7 +240,7 @@ export default function OpportunitiesPage() {
         ),
       },
     ],
-    [copyInstructions, router],
+    [copyInstructions, router]
   );
 
   if (loading && opportunities.length === 0) {
@@ -292,9 +270,7 @@ export default function OpportunitiesPage() {
         onIncludeStaleChange={setIncludeStale}
       />
 
-      {error ? (
-        <ErrorState message={error} onRetry={() => void loadOpportunities(true)} />
-      ) : null}
+      {error ? <ErrorState message={error} onRetry={() => void loadOpportunities(true)} /> : null}
 
       <Paper sx={{ overflow: "hidden", border: 1, borderColor: "divider" }}>
         {refreshing ? <LinearProgress /> : null}
@@ -308,16 +284,11 @@ export default function OpportunitiesPage() {
             pagination: { paginationModel: { pageSize: 10 } },
             sorting: { sortModel: [{ field: "margin", sort: "desc" }] },
           }}
-          onRowClick={(params) => router.push(`/opportunities/${params.row.id}`)}
-          getRowClassName={(params: GridRowClassNameParams<ActiveArbitrageOpportunity>) =>
-            updatedIds.has(Number(params.id)) ? "updated-row" : ""
-          }
+          onRowClick={(params: GridRowParams<ActiveArbitrageOpportunity>) => router.push(`/opportunities/${params.row.id}`)}
+          getRowClassName={(params: GridRowClassNameParams<ActiveArbitrageOpportunity>) => (updatedIds.has(Number(params.id)) ? "updated-row" : "")}
           slots={{
             noRowsOverlay: () => (
-              <EmptyState
-                title="No opportunities found yet"
-                message="Run a scan to check the latest odds, or seed demo data for a local walkthrough."
-              />
+              <EmptyState title="No opportunities found yet" message="Run a scan to check the latest odds, or seed demo data for a local walkthrough." />
             ),
           }}
           localeText={{ noRowsLabel: "No arbitrage opportunities found" }}
@@ -366,11 +337,7 @@ function PageHeader({
   onIncludeStaleChange: (value: boolean) => void;
 }) {
   return (
-    <Stack
-      direction={{ xs: "column", md: "row" }}
-      spacing={2}
-      sx={{ alignItems: { xs: "stretch", md: "flex-start" }, justifyContent: "space-between" }}
-    >
+    <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: { xs: "stretch", md: "flex-start" }, justifyContent: "space-between" }}>
       <Box>
         <Typography variant="h5">Opportunities</Typography>
         <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
@@ -379,10 +346,7 @@ function PageHeader({
       </Box>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" } }}>
         <Chip size="small" color={autoRefresh ? "primary" : "default"} label={`Refresh in ${countdown}s`} />
-        <FormControlLabel
-          control={<Switch checked={includeStale} onChange={(event) => onIncludeStaleChange(event.target.checked)} />}
-          label="Include stale"
-        />
+        <FormControlLabel control={<Switch checked={includeStale} onChange={(event) => onIncludeStaleChange(event.target.checked)} />} label="Include stale" />
         <FormControlLabel
           control={<Switch checked={autoRefresh} onChange={(event) => onAutoRefreshChange(event.target.checked)} />}
           label="Auto-refresh (30s)"
@@ -413,9 +377,7 @@ function freshnessColor(status: ActiveArbitrageOpportunity["validation_status"])
 }
 
 function validationTooltip(opportunity: ActiveArbitrageOpportunity) {
-  const reasons = opportunity.validation_reasons.reasons?.length
-    ? opportunity.validation_reasons.reasons
-    : ["No validation reasons recorded."];
+  const reasons = opportunity.validation_reasons.reasons?.length ? opportunity.validation_reasons.reasons : ["No validation reasons recorded."];
 
   return (
     <Box sx={{ maxWidth: 360 }}>
@@ -426,8 +388,7 @@ function validationTooltip(opportunity: ActiveArbitrageOpportunity) {
           </Typography>
         ))}
         <Typography color="inherit" variant="caption">
-          Odds age: {opportunity.odds_age_seconds ?? "unknown"}s | Starts in:{" "}
-          {opportunity.validation_reasons.event_start_minutes ?? "unknown"}m
+          Odds age: {opportunity.odds_age_seconds ?? "unknown"}s | Starts in: {opportunity.validation_reasons.event_start_minutes ?? "unknown"}m
         </Typography>
       </Stack>
     </Box>

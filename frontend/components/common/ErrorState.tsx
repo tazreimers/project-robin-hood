@@ -1,12 +1,6 @@
 import { Alert, Button } from "@mui/material";
 
-export default function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
+export default function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <Alert
       severity="error"

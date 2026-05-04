@@ -1,0 +1,213 @@
+Read AGENTS.md first and preserve the existing architecture.
+
+Goal:
+Review the ESLint and Prettier setup in the sibling repository anvil/UI, copy the relevant linting and formatting rules into this repository, and make this repo follow the same frontend code quality standards.
+
+Assumptions:
+- This repository and anvil/UI are available in the same parent workspace.
+- anvil/UI is the source of truth for frontend linting and formatting conventions.
+- Only copy ESLint and Prettier-related configuration unless a small supporting change is required.
+
+Do not change product behaviour.
+Do not rewrite UI code unnecessarily.
+Do not introduce unrelated dependencies.
+
+---
+
+# 1. Inspect anvil/UI
+
+Look for ESLint and Prettier configuration in anvil/UI, including:
+
+- package.json
+- eslint.config.js
+- eslint.config.mjs
+- .eslintrc
+- .eslintrc.js
+- .eslintrc.json
+- .prettierrc
+- .prettierrc.js
+- prettier.config.js
+- prettier.config.mjs
+- .prettierignore
+- .eslintignore
+- tsconfig.json
+- next.config.js
+- any lint-staged or husky setup if directly related
+
+Identify:
+- ESLint parser/plugins/configs
+- Prettier rules
+- ignored files
+- npm scripts
+- required devDependencies
+- TypeScript/Next.js-specific lint settings
+
+---
+
+# 2. Compare with this repo
+
+Inspect this repo’s frontend linting setup:
+
+- frontend/package.json
+- frontend/eslint config files
+- frontend/prettier config files
+- frontend/tsconfig.json
+- root package.json if present
+- root ESLint/Prettier configs if present
+
+Determine what needs to be:
+- copied
+- merged
+- updated
+- removed
+- renamed
+
+Prefer keeping config local to frontend/ unless this repo already uses root-level tooling.
+
+---
+
+# 3. Implement ESLint config
+
+Copy or adapt the ESLint configuration from anvil/UI.
+
+Requirements:
+- Preserve compatibility with this repo’s Next.js + React + TypeScript setup.
+- Ensure MUI imports and React components lint correctly.
+- Ensure app router files lint correctly.
+- Avoid deprecated ESLint configuration if the repo is already using the newer flat config.
+- If anvil/UI uses flat config, use flat config here too unless incompatible.
+- If anvil/UI uses legacy .eslintrc, copy that style unless this repo already uses flat config.
+
+Update frontend/package.json scripts:
+
+- "lint": run ESLint on the frontend source
+- "lint:fix": run ESLint with --fix
+- "format": run Prettier write
+- "format:check": run Prettier check
+
+Use the same script style as anvil/UI where practical.
+
+---
+
+# 4. Implement Prettier config
+
+Copy or adapt Prettier rules from anvil/UI.
+
+Add/update:
+- Prettier config
+- .prettierignore
+
+Ensure the ignore file excludes:
+- node_modules
+- .next
+- out
+- build
+- coverage
+- generated files
+- lock files if anvil/UI ignores them
+- any backend/cache outputs that should not be formatted
+
+---
+
+# 5. Install required dependencies
+
+Compare devDependencies with anvil/UI and add only the required linting/formatting packages.
+
+Examples may include:
+- eslint
+- prettier
+- eslint-config-prettier
+- eslint-plugin-import
+- eslint-plugin-react
+- eslint-plugin-react-hooks
+- eslint-plugin-jsx-a11y
+- @typescript-eslint/parser
+- @typescript-eslint/eslint-plugin
+- typescript-eslint
+- eslint-config-next
+
+Use the package manager already used by this frontend:
+- npm if package-lock.json exists
+- pnpm if pnpm-lock.yaml exists
+- yarn if yarn.lock exists
+
+Do not change package manager.
+
+---
+
+# 6. Apply formatting and lint fixes
+
+Run:
+
+- package manager install if dependencies changed
+- frontend lint
+- frontend lint:fix
+- frontend format
+- frontend format:check
+- frontend build if available
+
+Fix remaining lint errors where reasonable.
+
+For any lint errors that reveal real code issues:
+- fix them cleanly
+- do not disable rules globally unless absolutely necessary
+- prefer local, justified disable comments only where unavoidable
+
+Do not make large UI/product changes just to satisfy linting.
+
+---
+
+# 7. Update repo scripts
+
+Update root scripts if they exist:
+
+- scripts/lint.sh should run frontend lint and backend lint if configured
+- scripts/format.sh should run frontend format and backend format if configured
+- Makefile lint target should call scripts/lint.sh
+- Makefile format target should call scripts/format.sh
+
+Make sure these scripts still work if backend linting is not configured.
+
+---
+
+# 8. Documentation
+
+Update developer docs:
+
+- README.md
+- docs/frontend.md
+- docs/testing.md or docs/contributing.md if present
+
+Document:
+- lint command
+- lint fix command
+- format command
+- format check command
+- where ESLint config lives
+- where Prettier config lives
+- that rules were aligned with anvil/UI
+
+---
+
+# 9. Verification
+
+Before finishing, run and report results for:
+
+- frontend lint
+- frontend format:check
+- frontend build
+- root lint script if present
+- root format script if present
+
+If any command cannot run, explain why and what remains.
+
+---
+
+# 10. Final response
+
+Summarize:
+- which anvil/UI config files were used
+- which files were added/updated in this repo
+- which dependencies were added/updated
+- which commands were run
+- any remaining lint/build issues

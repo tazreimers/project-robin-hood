@@ -1,19 +1,6 @@
 "use client";
 
-import {
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Box, Card, CardContent, Grid, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import EmptyState from "../../components/common/EmptyState";
@@ -59,10 +46,7 @@ export default function ApiUsagePage() {
 
   return (
     <Stack spacing={3}>
-      <PageHeader
-        title="API Usage"
-        description="Provider quota telemetry captured from odds API responses."
-      />
+      <PageHeader title="API Usage" description="Provider quota telemetry captured from odds API responses." />
 
       <Card>
         <CardContent>
@@ -88,10 +72,7 @@ export default function ApiUsagePage() {
       </Card>
 
       {logs.length === 0 ? (
-        <EmptyState
-          title="No API usage recorded yet"
-          message="Usage will appear after your first odds request or after seeding local demo data."
-        />
+        <EmptyState title="No API usage recorded yet" message="Usage will appear after your first odds request or after seeding local demo data." />
       ) : (
         <TableContainer component={Card}>
           <Table>

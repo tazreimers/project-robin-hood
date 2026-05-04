@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Card,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from "@mui/material";
+import { Card, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import EmptyState from "../../components/common/EmptyState";
@@ -52,16 +43,10 @@ export default function ExecutionsPage() {
 
   return (
     <Stack spacing={3}>
-      <PageHeader
-        title="Executions"
-        description="Manual execution plans and actual odds/stakes entered by the user."
-      />
+      <PageHeader title="Executions" description="Manual execution plans and actual odds/stakes entered by the user." />
 
       {executions.length === 0 ? (
-        <EmptyState
-          title="No executions recorded yet"
-          message="Open an opportunity, enter actual odds and stake details, then save the manual execution."
-        />
+        <EmptyState title="No executions recorded yet" message="Open an opportunity, enter actual odds and stake details, then save the manual execution." />
       ) : (
         <TableContainer component={Card}>
           <Table>
@@ -88,9 +73,7 @@ export default function ExecutionsPage() {
                   <TableCell align="right">{formatMoney(execution.total_stake_planned)}</TableCell>
                   <TableCell align="right">{formatMoney(execution.total_stake_actual)}</TableCell>
                   <TableCell align="right">{formatMoney(execution.expected_profit)}</TableCell>
-                  <TableCell align="right">
-                    {execution.actual_profit === null ? "Pending" : formatMoney(execution.actual_profit)}
-                  </TableCell>
+                  <TableCell align="right">{execution.actual_profit === null ? "Pending" : formatMoney(execution.actual_profit)}</TableCell>
                   <TableCell>{formatDateTime(execution.updated_at)}</TableCell>
                 </TableRow>
               ))}

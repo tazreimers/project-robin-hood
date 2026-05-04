@@ -102,21 +102,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           onModeChange={setMode}
           onRunScan={() => void runScan()}
         />
-        <AppSidebar
-          open={sidebarOpen}
-          width={drawerWidth}
-          onToggle={() => setSidebarOpen((value) => !value)}
-        />
+        <AppSidebar open={sidebarOpen} width={drawerWidth} onToggle={() => setSidebarOpen((value) => !value)} />
         <Box component="main" sx={{ flexGrow: 1, minWidth: 0, height: "100vh", overflow: "auto", pt: 8 }}>
           <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1680, mx: "auto" }}>{children}</Box>
         </Box>
       </Box>
-      <Snackbar
-        open={Boolean(snackbar)}
-        autoHideDuration={3600}
-        onClose={() => setSnackbar(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
+      <Snackbar open={Boolean(snackbar)} autoHideDuration={3600} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
         {snackbar ? (
           <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(null)}>
             {snackbar.message}

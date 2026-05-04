@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  Card,
-  CardContent,
-  Chip,
-  Grid,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Card, CardContent, Chip, Grid, Stack, Typography } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import HelpCallout from "../../components/help/HelpCallout";
@@ -59,14 +48,10 @@ const sections = [
 export default function HelpPage() {
   return (
     <Stack spacing={3}>
-      <PageHeader
-        title="Help"
-        description="Operational guidance for using the scanner safely and understanding what the UI is showing."
-      />
+      <PageHeader title="Help" description="Operational guidance for using the scanner safely and understanding what the UI is showing." />
 
       <HelpCallout severity="warning">
-        This app provides analytics and manual instructions only. You must verify every leg yourself before taking
-        any action outside the app.
+        This app provides analytics and manual instructions only. You must verify every leg yourself before taking any action outside the app.
       </HelpCallout>
 
       <Grid container spacing={2}>
@@ -102,9 +87,7 @@ export default function HelpPage() {
         </CardContent>
       </Card>
 
-      <Alert severity="info">
-        For developer setup and troubleshooting, see the Markdown docs in the repository `docs/` directory.
-      </Alert>
+      <Alert severity="info">For developer setup and troubleshooting, see the Markdown docs in the repository `docs/` directory.</Alert>
     </Stack>
   );
 }

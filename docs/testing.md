@@ -19,7 +19,18 @@ Or through Docker:
 
 ## Frontend
 
-The frontend currently has linting and TypeScript checks but no test runner. When adding one, wire it into `frontend/package.json` as `npm test` so `scripts/test.sh` can run it automatically.
+The frontend currently has linting, formatting checks, and TypeScript checks through `next build`, but no test runner. When adding one, wire it into `frontend/package.json` as `npm test` so `scripts/test.sh` can run it automatically.
+
+Frontend linting and formatting follow the sibling `anvil/UI` standards. Run:
+
+```bash
+cd frontend
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+npm run build
+```
 
 ## Always Test
 
@@ -36,6 +47,7 @@ The frontend currently has linting and TypeScript checks but no test runner. Whe
 ```bash
 cd frontend
 npm run lint
+npm run format:check
 npm run build
 ./node_modules/.bin/tsc --noEmit --incremental false
 ```

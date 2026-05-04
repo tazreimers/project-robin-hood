@@ -32,3 +32,23 @@ Use React state, hooks, and small helper hooks. Do not introduce Redux without a
 ## API Client
 
 All browser API calls should go through `frontend/lib/api.ts`. That keeps error behavior, base URL handling, and response types consistent.
+
+## Linting And Formatting
+
+Frontend linting and formatting are aligned with the sibling `anvil/UI` project.
+
+- ESLint config: `frontend/eslint.config.mjs`
+- Prettier config: `frontend/.prettierrc.cjs`
+- Prettier ignores: `frontend/.prettierignore`
+
+Run:
+
+```bash
+cd frontend
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+```
+
+The ESLint setup uses flat config, typed TypeScript rules, React/React Hooks rules, Next.js core web vitals, and portable equivalents for Anvil rules that depend on Anvil-only local plugins.

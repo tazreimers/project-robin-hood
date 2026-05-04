@@ -2,15 +2,7 @@ import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import { Box, Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 
-export default function EmptyState({
-  title,
-  message,
-  action,
-}: {
-  title: string;
-  message: string;
-  action?: ReactNode;
-}) {
+export default function EmptyState({ title, message, action }: { title: string; message: string; action?: ReactNode }) {
   return (
     <Stack spacing={2} sx={{ alignItems: "center", justifyContent: "center", py: 6, textAlign: "center" }}>
       <Box
