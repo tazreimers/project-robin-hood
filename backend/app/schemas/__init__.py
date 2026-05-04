@@ -1,5 +1,12 @@
 from app.schemas.api_usage import ApiUsageLogRead, ApiUsageRead
 from app.schemas.dashboard import BookmakerPairMetricRead, DashboardMetricsRead, RecentActivityRead
+from app.schemas.execution import (
+    ExecutionLegPatch,
+    ExecutionLegRead,
+    OpportunityExecutionCreate,
+    OpportunityExecutionPatch,
+    OpportunityExecutionRead,
+)
 from app.schemas.health import HealthResponse
 from app.schemas.odds import (
     ActiveArbitrageLegRead,
@@ -43,6 +50,8 @@ __all__ = [
     "DashboardMetricsRead",
     "EventRead",
     "EventScanPriorityRead",
+    "ExecutionLegPatch",
+    "ExecutionLegRead",
     "HealthResponse",
     "MarketAliasCreate",
     "MarketAliasRead",
@@ -53,6 +62,9 @@ __all__ = [
     "OpportunityInstructionsRead",
     "OpportunityActionCreate",
     "OpportunityActionRead",
+    "OpportunityExecutionCreate",
+    "OpportunityExecutionPatch",
+    "OpportunityExecutionRead",
     "OutcomeRead",
     "ScanRunRead",
     "ScanPriorityEventRead",

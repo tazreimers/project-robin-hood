@@ -318,10 +318,41 @@ export default function DashboardPage() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SummaryCard
-            label="Actual profit/loss"
+            label="Expected profit"
+            value={formatMoney(metrics?.expected_profit ?? 0)}
+            loading={loading}
+            tone="success.main"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Actual profit"
+            value={formatMoney(metrics?.actual_profit ?? 0)}
+            loading={loading}
+            tone={Number(metrics?.actual_profit ?? 0) >= 0 ? "success.main" : "error.main"}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Settled profit/loss"
             value={formatMoney(metrics?.actual_profit_loss ?? 0)}
             loading={loading}
             tone={Number(metrics?.actual_profit_loss ?? 0) >= 0 ? "success.main" : "error.main"}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Odds changed before action"
+            value={metrics?.odds_changed_before_action ?? 0}
+            loading={loading}
+            tone={Number(metrics?.odds_changed_before_action ?? 0) > 0 ? "warning.main" : undefined}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SummaryCard
+            label="Skipped"
+            value={metrics?.skipped_opportunities ?? 0}
+            loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>

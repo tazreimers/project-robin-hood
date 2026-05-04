@@ -4,10 +4,14 @@ import type {
   BetRecord,
   BetRecordPayload,
   DashboardMetrics,
+  ExecutionLegPatchPayload,
   EventScanPriority,
   HealthResponse,
   MarketQualityCheck,
   OpportunityAction,
+  OpportunityExecution,
+  OpportunityExecutionCreatePayload,
+  OpportunityExecutionPatchPayload,
   OpportunityInstructions,
   ScanRun,
 } from "../types/api";
@@ -23,12 +27,19 @@ export type {
   BookmakerRead,
   DashboardMetrics,
   EventRead,
+  ExecutionLeg,
+  ExecutionLegPatchPayload,
+  ExecutionLegStatus,
   EventScanPriority,
   HealthResponse,
   MarketQualityCheck,
   MarketQualityReasons,
   MarketQualityStatus,
   OpportunityAction,
+  OpportunityExecution,
+  OpportunityExecutionCreatePayload,
+  OpportunityExecutionPatchPayload,
+  OpportunityExecutionStatus,
   OpportunityInstructionLeg,
   OpportunityInstructions,
   OpportunityValidationReasons,
@@ -104,6 +115,38 @@ export function createOpportunityAction(opportunityId: string, actionType: strin
 
 export function markOpportunityActioned(opportunityId: string) {
   return fetchJson(`/opportunities/${opportunityId}/mark-actioned`, { method: "POST" });
+}
+
+export function createOpportunityExecution(opportunityId: string, payload: OpportunityExecutionCreatePayload = {}) {
+  return fetchJson<OpportunityExecution>(`/opportunities/${opportunityId}/executions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getExecutions() {
+  return fetchJson<OpportunityExecution[]>("/executions");
+}
+
+export function getExecution(executionId: number) {
+  return fetchJson<OpportunityExecution>(`/executions/${executionId}`);
+}
+
+export function updateExecution(executionId: number, payload: OpportunityExecutionPatchPayload) {
+  return fetchJson<OpportunityExecution>(`/executions/${executionId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateExecutionLeg(executionId: number, legId: number, payload: ExecutionLegPatchPayload) {
+  return fetchJson<OpportunityExecution>(`/executions/${executionId}/legs/${legId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 }
 
 export function createBetRecord(opportunityId: string, payload: BetRecordPayload) {

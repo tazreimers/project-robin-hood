@@ -24,6 +24,8 @@ This document summarizes the current SQLAlchemy models and database tables.
 ## Tracking Tables
 
 - `opportunity_actions`: Manual user action log for opportunities. Supported actions are `VIEWED`, `ACTIONED`, `SKIPPED`, `EXPIRED`, `ODDS_CHANGED`, `BET_REJECTED`, `WON`, and `LOST`.
+- `opportunity_executions`: Manual execution plans for an opportunity, including planned/actual stake totals, expected profit, actual profit estimate, status, and notes.
+- `execution_legs`: Per-bookmaker manual execution leg records, including recommended odds/stake, user-entered actual odds/stake, leg status, and notes.
 - `bet_records`: Manual bet record entries for odds taken, recommended stake, actual stake, settlement status, payout, and profit/loss.
 
 ## Operational Tables

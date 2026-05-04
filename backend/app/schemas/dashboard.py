@@ -24,7 +24,11 @@ class DashboardMetricsRead(BaseModel):
     opportunities_actioned: int
     expired_before_action: int
     total_recommended_profit: Decimal
+    expected_profit: Decimal
+    actual_profit: Decimal
     actual_profit_loss: Decimal
+    odds_changed_before_action: int
+    skipped_opportunities: int
     average_margin: Decimal | None
     average_odds_age: Decimal | None
     best_bookmaker_pairs: list[BookmakerPairMetricRead] = Field(default_factory=list)

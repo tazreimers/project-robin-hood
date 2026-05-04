@@ -2,6 +2,7 @@
 
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import SaveIcon from "@mui/icons-material/Save";
 import {
   Alert,
   Avatar,
@@ -16,29 +17,52 @@ import {
   Skeleton,
   Snackbar,
   Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  createOpportunityExecution,
   createOpportunityAction,
   formatDateTime,
   formatMoney,
   formatPercent,
+  getExecutions,
   getOpportunityInstructions,
   markOpportunityActioned,
+  updateExecution,
+  updateExecutionLeg,
 } from "../../../lib/api";
-import type { OpportunityInstructions } from "../../../types/api";
+import type { ExecutionLegStatus, OpportunityExecution, OpportunityInstructions } from "../../../types/api";
 
 const checklistItems = ["Verify odds", "Confirm stake", "Confirm event/time"];
+const legStatusOptions: Array<{ label: string; value: ExecutionLegStatus }> = [
+  { label: "Placed", value: "PLACED" },
+  { label: "Skipped", value: "SKIPPED" },
+  { label: "Odds Changed", value: "ODDS_CHANGED" },
+];
+
+type LegDraft = {
+  actualOdds: string;
+  actualStake: string;
+  status: ExecutionLegStatus;
+  notes: string;
+};
 
 export default function OpportunityDetailPage({ params }: { params: { id: string } }) {
   const [instructions, setInstructions] = useState<OpportunityInstructions | null>(null);
+  const [execution, setExecution] = useState<OpportunityExecution | null>(null);
+  const [legDrafts, setLegDrafts] = useState<Record<number, LegDraft>>({});
+  const [executionNotes, setExecutionNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actioned, setActioned] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [executionSaving, setExecutionSaving] = useState(false);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
@@ -47,8 +71,12 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
     setError(null);
 
     try {
-      const response = await getOpportunityInstructions(params.id);
+      const [response, executions] = await Promise.all([getOpportunityInstructions(params.id), getExecutions()]);
+      const currentExecution = executions.find((item) => String(item.opportunity_id) === params.id) ?? null;
       setInstructions(response);
+      setExecution(currentExecution);
+      setExecutionNotes(currentExecution?.notes ?? "");
+      setLegDrafts(buildLegDrafts(response, currentExecution));
       void createOpportunityAction(params.id, "VIEWED", "Opened execution screen").catch(() => undefined);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load opportunity");
@@ -56,6 +84,16 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       setLoading(false);
     }
   }, [params.id]);
+
+  const updateLegDraft = useCallback((legId: number, field: keyof LegDraft, value: string) => {
+    setLegDrafts((current) => ({
+      ...current,
+      [legId]: {
+        ...current[legId],
+        [field]: value,
+      },
+    }));
+  }, []);
 
   const markActioned = useCallback(async () => {
     setSubmitting(true);
@@ -72,6 +110,52 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
     }
   }, [params.id]);
 
+  const saveExecution = useCallback(async () => {
+    if (!instructions) {
+      return;
+    }
+
+    setExecutionSaving(true);
+    setActionError(null);
+
+    try {
+      let savedExecution =
+        execution ??
+        (await createOpportunityExecution(params.id, {
+          notes: nullableText(executionNotes),
+        }));
+
+      savedExecution = await updateExecution(savedExecution.id, {
+        notes: nullableText(executionNotes),
+      });
+
+      for (const executionLeg of savedExecution.legs) {
+        const instructionLeg = instructions.legs.find(
+          (leg) => leg.bookmaker.id === executionLeg.bookmaker_id && leg.outcome_name === executionLeg.outcome_name,
+        );
+        if (!instructionLeg) {
+          continue;
+        }
+
+        const draft = legDrafts[instructionLeg.id] ?? defaultLegDraft(instructionLeg);
+        savedExecution = await updateExecutionLeg(savedExecution.id, executionLeg.id, {
+          actual_odds: nullableText(draft.actualOdds),
+          actual_stake: nullableText(draft.actualStake),
+          status: draft.status,
+          notes: nullableText(draft.notes),
+        });
+      }
+
+      setExecution(savedExecution);
+      setLegDrafts(buildLegDrafts(instructions, savedExecution));
+      setSnackbar("Execution saved");
+    } catch (saveError) {
+      setActionError(saveError instanceof Error ? saveError.message : "Unable to save execution");
+    } finally {
+      setExecutionSaving(false);
+    }
+  }, [execution, executionNotes, instructions, legDrafts, params.id]);
+
   const copyInstructions = useCallback(async () => {
     if (!instructions) {
       return;
@@ -79,12 +163,19 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
     try {
       const text = [
-        `${instructions.event.home_team} vs ${instructions.event.away_team}`,
+        `Event: ${instructions.event.home_team} vs ${instructions.event.away_team}`,
         `Market: ${instructions.market}`,
         `Margin: ${formatPercent(instructions.margin)}`,
-        ...instructions.legs.map(
-          (leg) => `${leg.bookmaker.name}: ${leg.outcome_name} @ ${leg.decimal_odds}, stake ${formatMoney(leg.stake)}`,
-        ),
+        "",
+        ...instructions.legs.flatMap((leg, index) => [
+          `Leg ${index + 1}`,
+          `Bookmaker: ${leg.bookmaker.name}`,
+          `Outcome: ${leg.outcome_name}`,
+          `Odds: ${leg.decimal_odds}`,
+          `Stake: ${formatMoney(leg.stake)}`,
+          `Expected return: ${formatMoney(leg.expected_return)}`,
+          "",
+        ]),
       ].join("\n");
       await navigator.clipboard.writeText(text);
       setSnackbar("Bet instructions copied");
@@ -275,6 +366,11 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                   <Typography color="text.secondary" variant="body2">
                     Freshness: {leg.odds_age_seconds === null ? "unknown" : `${leg.odds_age_seconds}s old`}
                   </Typography>
+                  <ExecutionLegFields
+                    draft={legDrafts[leg.id] ?? defaultLegDraft(leg)}
+                    legId={leg.id}
+                    onChange={updateLegDraft}
+                  />
                 </Stack>
               </CardContent>
             </Card>
@@ -306,8 +402,37 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                   </Stack>
                 ))}
               </Stack>
+              <TextField
+                fullWidth
+                label="Notes"
+                multiline
+                minRows={2}
+                value={executionNotes}
+                onChange={(event) => setExecutionNotes(event.target.value)}
+                sx={{ mt: 2 }}
+              />
+              {execution ? (
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }} useFlexGap>
+                  <Chip label={execution.status} color={executionStatusColor(execution.status)} />
+                  <Metric label="Actual stake" value={formatMoney(execution.total_stake_actual)} />
+                  <Metric
+                    label="Actual profit"
+                    value={execution.actual_profit === null ? "Pending" : formatMoney(execution.actual_profit)}
+                    success={Number(execution.actual_profit ?? 0) >= 0}
+                  />
+                </Stack>
+              ) : null}
             </Box>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={executionSaving ? null : <SaveIcon />}
+                onClick={() => void saveExecution()}
+                disabled={executionSaving}
+              >
+                {executionSaving ? "Saving..." : "Save Execution"}
+              </Button>
               <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={() => void copyInstructions()}>
                 Copy Instructions
               </Button>
@@ -338,6 +463,44 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   );
 }
 
+function buildLegDrafts(
+  instructions: OpportunityInstructions,
+  execution: OpportunityExecution | null,
+): Record<number, LegDraft> {
+  const executionLegs = new Map(
+    (execution?.legs ?? []).map((leg) => [`${leg.bookmaker_id}:${leg.outcome_name}`, leg] as const),
+  );
+
+  return Object.fromEntries(
+    instructions.legs.map((leg) => {
+      const executionLeg = executionLegs.get(`${leg.bookmaker.id}:${leg.outcome_name}`);
+      return [
+        leg.id,
+        {
+          actualOdds: executionLeg?.actual_odds ?? leg.decimal_odds,
+          actualStake: executionLeg?.actual_stake ?? leg.stake,
+          status: executionLeg?.status ?? "PLANNED",
+          notes: executionLeg?.notes ?? "",
+        },
+      ];
+    }),
+  );
+}
+
+function defaultLegDraft(leg: OpportunityInstructions["legs"][number]): LegDraft {
+  return {
+    actualOdds: leg.decimal_odds,
+    actualStake: leg.stake,
+    status: "PLANNED",
+    notes: "",
+  };
+}
+
+function nullableText(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 function qualityReasons(qualityCheck: OpportunityInstructions["quality_check"]) {
   if (!qualityCheck) {
     return ["No quality check was recorded for this opportunity."];
@@ -361,6 +524,71 @@ function qualityColor(status: string): "success" | "warning" | "error" | "defaul
     return "error";
   }
   return "default";
+}
+
+function executionStatusColor(status: string): "success" | "warning" | "error" | "info" | "default" {
+  if (status === "ACTIONED" || status === "SETTLED") {
+    return "success";
+  }
+  if (status === "PARTIALLY_ACTIONED" || status === "PLANNED") {
+    return "info";
+  }
+  if (status === "ODDS_CHANGED") {
+    return "warning";
+  }
+  if (status === "SKIPPED") {
+    return "default";
+  }
+  return "default";
+}
+
+function ExecutionLegFields({
+  draft,
+  legId,
+  onChange,
+}: {
+  draft: LegDraft;
+  legId: number;
+  onChange: (legId: number, field: keyof LegDraft, value: string) => void;
+}) {
+  return (
+    <Stack spacing={1.5}>
+      <Divider />
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+        <TextField
+          fullWidth
+          label="Actual odds"
+          size="small"
+          value={draft.actualOdds}
+          onChange={(event) => onChange(legId, "actualOdds", event.target.value)}
+          slotProps={{ input: { inputMode: "decimal" } }}
+        />
+        <TextField
+          fullWidth
+          label="Actual stake"
+          size="small"
+          value={draft.actualStake}
+          onChange={(event) => onChange(legId, "actualStake", event.target.value)}
+          slotProps={{ input: { inputMode: "decimal" } }}
+        />
+      </Stack>
+      <ToggleButtonGroup
+        exclusive
+        fullWidth
+        size="small"
+        value={draft.status === "PLANNED" ? null : draft.status}
+        onChange={(_, value: ExecutionLegStatus | null) => {
+          onChange(legId, "status", value ?? "PLANNED");
+        }}
+      >
+        {legStatusOptions.map((option) => (
+          <ToggleButton key={option.value} value={option.value} sx={{ minHeight: 40 }}>
+            {option.label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+    </Stack>
+  );
 }
 
 function Metric({

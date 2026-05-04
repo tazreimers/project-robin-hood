@@ -38,7 +38,11 @@ export type DashboardMetrics = {
   opportunities_actioned: number;
   expired_before_action: number;
   total_recommended_profit: string;
+  expected_profit: string;
+  actual_profit: string;
   actual_profit_loss: string;
+  odds_changed_before_action: number;
+  skipped_opportunities: number;
   average_margin: string | null;
   average_odds_age: string | null;
   best_bookmaker_pairs: BookmakerPairMetric[];
@@ -218,6 +222,62 @@ export type OpportunityAction = {
   action_type: string;
   notes: string | null;
   created_at: string;
+};
+
+export type OpportunityExecutionStatus =
+  | "PLANNED"
+  | "ACTIONED"
+  | "PARTIALLY_ACTIONED"
+  | "ODDS_CHANGED"
+  | "SKIPPED"
+  | "SETTLED";
+
+export type ExecutionLegStatus = "PLANNED" | "PLACED" | "SKIPPED" | "ODDS_CHANGED";
+
+export type ExecutionLeg = {
+  id: number;
+  execution_id: number;
+  bookmaker_id: number;
+  bookmaker: BookmakerRead;
+  outcome_name: string;
+  recommended_odds: string;
+  actual_odds: string | null;
+  recommended_stake: string;
+  actual_stake: string | null;
+  status: ExecutionLegStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OpportunityExecution = {
+  id: number;
+  opportunity_id: number;
+  status: OpportunityExecutionStatus;
+  total_stake_planned: string;
+  total_stake_actual: string;
+  expected_profit: string;
+  actual_profit: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  legs: ExecutionLeg[];
+};
+
+export type OpportunityExecutionCreatePayload = {
+  notes?: string | null;
+};
+
+export type OpportunityExecutionPatchPayload = {
+  status?: OpportunityExecutionStatus | null;
+  notes?: string | null;
+};
+
+export type ExecutionLegPatchPayload = {
+  actual_odds?: string | null;
+  actual_stake?: string | null;
+  status?: ExecutionLegStatus | null;
+  notes?: string | null;
 };
 
 export type BetRecordPayload = {

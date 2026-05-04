@@ -50,7 +50,7 @@ Docker Compose wires these services together for local development.
 
 ## Manual Tracking Flow
 
-Users can log manual actions against an opportunity and manually record bet details. These records power dashboard metrics such as actioned opportunities, expired opportunities, recommended profit, realized profit/loss, average margin, average odds age, and best bookmaker pairs.
+Users can log manual actions against an opportunity, create a manual execution plan from the recommended opportunity legs, record actual odds/stakes and leg statuses, and manually record settlement details later. Execution records power dashboard metrics such as actioned opportunities, expected profit, actual profit estimate, odds changed before action, and skipped opportunities. Bet records continue to power settled profit/loss metrics.
 
 The system does not automate bookmaker account access or bet placement.
 

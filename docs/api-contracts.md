@@ -44,6 +44,11 @@ Base URL in local development: `http://localhost:8000`.
 ## Manual Action Tracking
 
 - `POST /opportunities/{opportunity_id}/actions`: Creates a manual action log entry.
+- `POST /opportunities/{opportunity_id}/executions`: Creates a manual execution plan from the opportunity's recommended legs.
+- `GET /executions`: Lists manual execution plans newest first.
+- `GET /executions/{execution_id}`: Returns one manual execution plan with legs.
+- `PATCH /executions/{execution_id}`: Updates execution status or notes.
+- `PATCH /executions/{execution_id}/legs/{leg_id}`: Updates actual odds, actual stake, leg status, or leg notes.
 
 Supported action types:
 
@@ -56,6 +61,8 @@ Supported action types:
 - `WON`
 - `LOST`
 
+Execution statuses are `PLANNED`, `ACTIONED`, `PARTIALLY_ACTIONED`, `ODDS_CHANGED`, `SKIPPED`, and `SETTLED`. Execution leg statuses are `PLANNED`, `PLACED`, `SKIPPED`, and `ODDS_CHANGED`.
+
 ## Manual Bet Records
 
 - `POST /opportunities/{opportunity_id}/bet-records`: Creates a manual bet record.
@@ -63,4 +70,4 @@ Supported action types:
 
 ## Dashboard
 
-- `GET /dashboard/metrics`: Returns dashboard metrics, bookmaker pair metrics, and recent manual activity.
+- `GET /dashboard/metrics`: Returns dashboard metrics, execution metrics, bookmaker pair metrics, and recent manual activity.

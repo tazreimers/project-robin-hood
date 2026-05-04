@@ -30,6 +30,7 @@ class Bookmaker(CreatedAtMixin, Base):
     markets: Mapped[list[Market]] = relationship(back_populates="bookmaker", cascade="all, delete-orphan")
     odds_snapshots: Mapped[list[OddsSnapshot]] = relationship(back_populates="bookmaker", cascade="all, delete-orphan")
     arbitrage_legs: Mapped[list[ArbitrageLeg]] = relationship(back_populates="bookmaker")
+    execution_legs: Mapped[list[ExecutionLeg]] = relationship(back_populates="bookmaker")
 
 
 class Sport(CreatedAtMixin, Base):
@@ -221,6 +222,10 @@ class ArbitrageOpportunity(Base):
     legs: Mapped[list[ArbitrageLeg]] = relationship(back_populates="opportunity", cascade="all, delete-orphan")
     actions: Mapped[list[OpportunityAction]] = relationship(back_populates="opportunity", cascade="all, delete-orphan")
     bet_records: Mapped[list[BetRecord]] = relationship(back_populates="opportunity", cascade="all, delete-orphan")
+    executions: Mapped[list[OpportunityExecution]] = relationship(
+        back_populates="opportunity",
+        cascade="all, delete-orphan",
+    )
 
 
 class ArbitrageLeg(Base):
@@ -266,6 +271,46 @@ class BetRecord(CreatedAtMixin, Base):
 
     opportunity: Mapped[ArbitrageOpportunity] = relationship(back_populates="bet_records")
     bookmaker: Mapped[Bookmaker] = relationship()
+
+
+class OpportunityExecution(TimestampMixin, Base):
+    __tablename__ = "opportunity_executions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    opportunity_id: Mapped[int] = mapped_column(
+        ForeignKey("arbitrage_opportunities.id", ondelete="CASCADE"),
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), default="PLANNED", server_default="PLANNED", index=True)
+    total_stake_planned: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    total_stake_actual: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), server_default="0")
+    expected_profit: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    actual_profit: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    opportunity: Mapped[ArbitrageOpportunity] = relationship(back_populates="executions")
+    legs: Mapped[list[ExecutionLeg]] = relationship(back_populates="execution", cascade="all, delete-orphan")
+
+
+class ExecutionLeg(TimestampMixin, Base):
+    __tablename__ = "execution_legs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    execution_id: Mapped[int] = mapped_column(
+        ForeignKey("opportunity_executions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    bookmaker_id: Mapped[int] = mapped_column(ForeignKey("bookmakers.id", ondelete="CASCADE"), index=True)
+    outcome_name: Mapped[str] = mapped_column(String(255))
+    recommended_odds: Mapped[Decimal] = mapped_column(Numeric(12, 4))
+    actual_odds: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    recommended_stake: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    actual_stake: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="PLANNED", server_default="PLANNED", index=True)
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    execution: Mapped[OpportunityExecution] = relationship(back_populates="legs")
+    bookmaker: Mapped[Bookmaker] = relationship(back_populates="execution_legs")
 
 
 class ScanRun(Base):

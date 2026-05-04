@@ -10,6 +10,12 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.dependencies import get_db
 from app.core.config import get_settings
 from app.core.constants import (
+    EXECUTION_LEG_STATUS_ODDS_CHANGED,
+    EXECUTION_STATUS_ACTIONED,
+    EXECUTION_STATUS_ODDS_CHANGED,
+    EXECUTION_STATUS_PARTIALLY_ACTIONED,
+    EXECUTION_STATUS_SETTLED,
+    EXECUTION_STATUS_SKIPPED,
     MONEY_PRECISION,
     PROBABILITY_PRECISION,
     SUPPORTED_OPPORTUNITY_ACTION_TYPES,
@@ -30,6 +36,7 @@ from app.models import (
     MarketAlias,
     MarketQualityCheck,
     OddsSnapshot,
+    OpportunityExecution,
     OpportunityAction,
     ScanRun,
     Sport,
@@ -57,10 +64,17 @@ from app.schemas.odds import (
     TeamAliasCreate,
     TeamAliasRead,
 )
-from app.schemas.scan_priority import EventScanPriorityRead
 from app.schemas.dashboard import BookmakerPairMetricRead, DashboardMetricsRead, RecentActivityRead
+from app.schemas.execution import (
+    ExecutionLegPatch,
+    OpportunityExecutionCreate,
+    OpportunityExecutionPatch,
+    OpportunityExecutionRead,
+)
 from app.schemas.quality import MarketQualityCheckRead
+from app.schemas.scan_priority import EventScanPriorityRead
 from app.schemas.scanner import ScanRunRead
+from app.services.execution import ExecutionNotFoundError, ExecutionValidationError, OpportunityExecutionService
 from app.services.health import get_health
 from app.services.normalization import canonical_sport_key, cleanup_key
 from app.services.opportunity_validator import (
@@ -317,6 +331,74 @@ def create_opportunity_action(
     return action
 
 
+@router.post("/opportunities/{opportunity_id}/executions", response_model=OpportunityExecutionRead, status_code=201)
+def create_opportunity_execution(
+    opportunity_id: int,
+    payload: OpportunityExecutionCreate,
+    db: Session = Depends(get_db),
+) -> OpportunityExecution:
+    service = OpportunityExecutionService(db)
+    try:
+        execution = service.create_execution(opportunity_id, payload)
+    except ExecutionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ExecutionValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    db.commit()
+    return service.get_execution(execution.id) or execution
+
+
+@router.get("/executions", response_model=list[OpportunityExecutionRead])
+def list_executions(db: Session = Depends(get_db)) -> list[OpportunityExecution]:
+    return OpportunityExecutionService(db).list_executions()
+
+
+@router.get("/executions/{execution_id}", response_model=OpportunityExecutionRead)
+def get_execution(execution_id: int, db: Session = Depends(get_db)) -> OpportunityExecution:
+    execution = OpportunityExecutionService(db).get_execution(execution_id)
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    return execution
+
+
+@router.patch("/executions/{execution_id}", response_model=OpportunityExecutionRead)
+def update_execution(
+    execution_id: int,
+    payload: OpportunityExecutionPatch,
+    db: Session = Depends(get_db),
+) -> OpportunityExecution:
+    service = OpportunityExecutionService(db)
+    try:
+        execution = service.update_execution(execution_id, payload)
+    except ExecutionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ExecutionValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    db.commit()
+    return service.get_execution(execution.id) or execution
+
+
+@router.patch("/executions/{execution_id}/legs/{leg_id}", response_model=OpportunityExecutionRead)
+def update_execution_leg(
+    execution_id: int,
+    leg_id: int,
+    payload: ExecutionLegPatch,
+    db: Session = Depends(get_db),
+) -> OpportunityExecution:
+    service = OpportunityExecutionService(db)
+    try:
+        execution = service.update_leg(execution_id, leg_id, payload)
+    except ExecutionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ExecutionValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    db.commit()
+    return service.get_execution(execution.id) or execution
+
+
 @router.post("/opportunities/{opportunity_id}/bet-records", response_model=BetRecordRead, status_code=201)
 def create_bet_record(
     opportunity_id: int,
@@ -468,13 +550,22 @@ def build_dashboard_metrics(db: Session) -> DashboardMetricsRead:
     )
     actions = list(db.scalars(select(OpportunityAction)).all())
     bet_records = list(db.scalars(select(BetRecord)).all())
+    executions = list(
+        db.scalars(
+            select(OpportunityExecution).options(selectinload(OpportunityExecution.legs))
+        ).all()
+    )
     recent_actions = list(
         db.scalars(select(OpportunityAction).order_by(OpportunityAction.created_at.desc()).limit(10)).all()
     )
 
     actioned_opportunity_ids = {
         action.opportunity_id for action in actions if action.action_type == "ACTIONED"
-    } | {opportunity.id for opportunity in opportunities if opportunity.status == "ACTIONED"}
+    } | {opportunity.id for opportunity in opportunities if opportunity.status == "ACTIONED"} | {
+        execution.opportunity_id
+        for execution in executions
+        if execution.status in {EXECUTION_STATUS_ACTIONED, EXECUTION_STATUS_PARTIALLY_ACTIONED, EXECUTION_STATUS_SETTLED}
+    }
     expired_opportunity_ids = {
         action.opportunity_id for action in actions if action.action_type == "EXPIRED"
     } | {
@@ -498,11 +589,28 @@ def build_dashboard_metrics(db: Session) -> DashboardMetricsRead:
         total_recommended_profit=quantize_money(
             sum((Decimal(str(opportunity.guaranteed_profit)) for opportunity in opportunities), Decimal("0"))
         ),
+        expected_profit=quantize_money(
+            sum((Decimal(str(execution.expected_profit)) for execution in executions), Decimal("0"))
+        ),
+        actual_profit=quantize_money(
+            sum(
+                (
+                    Decimal(str(execution.actual_profit))
+                    for execution in executions
+                    if execution.actual_profit is not None
+                ),
+                Decimal("0"),
+            )
+        ),
         actual_profit_loss=quantize_money(
             sum(
                 (Decimal(str(record.profit_loss)) for record in bet_records if record.profit_loss is not None),
                 Decimal("0"),
             )
+        ),
+        odds_changed_before_action=count_odds_changed_executions(executions),
+        skipped_opportunities=len(
+            {execution.opportunity_id for execution in executions if execution.status == EXECUTION_STATUS_SKIPPED}
         ),
         average_margin=average_decimal(margins, PROBABILITY_PRECISION),
         average_odds_age=average_decimal(odds_ages, Decimal("0.01")),
@@ -518,6 +626,16 @@ def build_dashboard_metrics(db: Session) -> DashboardMetricsRead:
             for action in recent_actions
         ],
     )
+
+
+def count_odds_changed_executions(executions: list[OpportunityExecution]) -> int:
+    opportunity_ids = {
+        execution.opportunity_id
+        for execution in executions
+        if execution.status == EXECUTION_STATUS_ODDS_CHANGED
+        or any(leg.status == EXECUTION_LEG_STATUS_ODDS_CHANGED for leg in execution.legs)
+    }
+    return len(opportunity_ids)
 
 
 def build_bookmaker_pair_metrics(

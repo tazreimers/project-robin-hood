@@ -1,0 +1,85 @@
+Build a manual execution workflow for opportunities.
+
+Read AGENTS.md first.
+
+Goal:
+Help the user act quickly while still requiring manual bet placement.
+
+Do not implement automatic betting, bookmaker login, captcha bypass, KYC bypass, or account control.
+
+Backend tasks:
+
+1. Add model: OpportunityExecution
+Fields:
+- id
+- opportunity_id
+- status
+- total_stake_planned
+- total_stake_actual
+- expected_profit
+- actual_profit
+- notes
+- created_at
+- updated_at
+
+Statuses:
+- PLANNED
+- ACTIONED
+- PARTIALLY_ACTIONED
+- ODDS_CHANGED
+- SKIPPED
+- SETTLED
+
+2. Add model: ExecutionLeg
+Fields:
+- id
+- execution_id
+- bookmaker_id
+- outcome_name
+- recommended_odds
+- actual_odds
+- recommended_stake
+- actual_stake
+- status
+- notes
+- created_at
+- updated_at
+
+3. Add endpoints:
+POST /opportunities/{id}/executions
+GET /executions
+GET /executions/{id}
+PATCH /executions/{id}
+PATCH /executions/{id}/legs/{leg_id}
+
+4. Opportunity detail page:
+Add execution form:
+- recommended stake per leg
+- input actual odds
+- input actual stake
+- mark each leg as placed / skipped / odds changed
+- notes field
+
+5. Dashboard:
+Add metrics:
+- opportunities actioned
+- expected profit
+- actual profit
+- odds changed before action
+- skipped opportunities
+
+6. UX:
+Add "Copy instructions" button:
+Copies plain text:
+- event
+- bookmaker
+- outcome
+- odds
+- stake
+- expected return
+
+Tests:
+- create execution from opportunity
+- update actual odds/stakes
+- calculate actual expected return
+- mark odds changed
