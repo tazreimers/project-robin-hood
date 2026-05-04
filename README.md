@@ -85,6 +85,8 @@ ODDS_REGIONS=au
 DEFAULT_TOTAL_STAKE=1000
 MIN_ARBITRAGE_MARGIN=0.01
 MAX_ODDS_AGE_SECONDS=60
+MIN_MARKET_CONFIDENCE=0.85
+MAX_EVENT_START_TIME_DIFF_MINUTES=5
 DAILY_QUOTA_BUDGET=500
 MIN_REQUESTS_REMAINING_BUFFER=20
 MAX_SCANS_PER_HOUR=12
@@ -186,6 +188,7 @@ GET /scan-runs
 GET /scan-runs/{id}
 GET /api-usage
 GET /scan-priorities
+GET /quality-checks
 GET /opportunities
 GET /opportunities/active
 GET /opportunities/active?include_stale=true

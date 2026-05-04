@@ -13,6 +13,7 @@ Base URL in local development: `http://localhost:8000`.
 - `GET /scan-runs/{scan_run_id}`: Returns one scan run.
 - `GET /api-usage`: Returns latest remaining quota, used quota, last request cost, estimated scans remaining, and recent usage logs.
 - `GET /scan-priorities`: Lists adaptive event scan priorities with event, start time, priority, next scan time, and reason.
+- `GET /quality-checks`: Lists market quality checks newest first.
 - `POST /jobs/fetch-odds`: Queues odds fetching.
 - `POST /jobs/adaptive-scan`: Queues the adaptive scan workflow for events whose priority schedule is due.
 - `POST /jobs/detect-arbitrage`: Queues arbitrage detection.
@@ -37,7 +38,7 @@ Base URL in local development: `http://localhost:8000`.
 - `GET /opportunities/active`: Lists active `FRESH` and `RISKY` opportunities by default.
 - `GET /opportunities/active?include_stale=true`: Includes `STALE` opportunities in the active list.
 - `GET /opportunities/{opportunity_id}`: Returns one opportunity.
-- `GET /opportunities/{opportunity_id}/instructions`: Returns manual bet instructions for an opportunity.
+- `GET /opportunities/{opportunity_id}/instructions`: Returns manual bet instructions, the latest market quality check, and per-leg freshness for an opportunity.
 - `POST /opportunities/{opportunity_id}/mark-actioned`: Marks an opportunity as manually actioned.
 
 ## Manual Action Tracking

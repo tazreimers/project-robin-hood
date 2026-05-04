@@ -26,6 +26,7 @@ from app.schemas.odds import (
 )
 from app.schemas.scan_priority import EventScanPriorityRead, ScanPriorityEventRead
 from app.schemas.scanner import ScanRunRead
+from app.schemas.quality import MarketQualityCheckRead
 
 __all__ = [
     "ActiveArbitrageLegRead",
@@ -46,6 +47,7 @@ __all__ = [
     "MarketAliasCreate",
     "MarketAliasRead",
     "MarketRead",
+    "MarketQualityCheckRead",
     "OddsSnapshotRead",
     "OpportunityInstructionLegRead",
     "OpportunityInstructionsRead",

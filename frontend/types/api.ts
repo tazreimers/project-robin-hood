@@ -67,6 +67,41 @@ export type ApiUsage = {
   usage_logs: ApiUsageLog[];
 };
 
+export type MarketQualityStatus = "VERIFIED" | "RISKY" | "STALE" | "REJECTED";
+
+export type MarketQualityReasons = {
+  failures?: string[];
+  warnings?: string[];
+  checks?: string[];
+  leg_freshness?: Array<{
+    bookmaker_id: number;
+    outcome_name: string;
+    captured_at: string;
+    odds_age_seconds: number;
+    fresh: boolean;
+  }>;
+  invalid_odds?: Array<{
+    bookmaker_id: number;
+    outcome_name: string;
+    decimal_odds: string;
+  }>;
+  suspended_quotes?: Array<{
+    bookmaker_id: number;
+    outcome_name: string;
+  }>;
+};
+
+export type MarketQualityCheck = {
+  id: number;
+  event_id: number;
+  market_type: string;
+  line: string | null;
+  status: MarketQualityStatus;
+  confidence_score: string;
+  reasons: MarketQualityReasons;
+  checked_at: string;
+};
+
 export type ScanPriorityEvent = {
   id: number;
   home_team: string;
@@ -158,6 +193,7 @@ export type OpportunityInstructionLeg = {
   expected_return: string;
   source_last_seen_at: string | null;
   odds_age_seconds: number | null;
+  freshness_status: MarketQualityStatus;
   instruction: string;
 };
 
@@ -170,6 +206,7 @@ export type OpportunityInstructions = {
   guaranteed_profit: string;
   guaranteed_return: string;
   margin: string;
+  quality_check: MarketQualityCheck | null;
   legs: OpportunityInstructionLeg[];
   instructions: string[];
   warning: string;

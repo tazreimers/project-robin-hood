@@ -85,6 +85,10 @@ class Event(TimestampMixin, Base):
         back_populates="event",
         cascade="all, delete-orphan",
     )
+    quality_checks: Mapped[list[MarketQualityCheck]] = relationship(
+        back_populates="event",
+        cascade="all, delete-orphan",
+    )
     scan_priority: Mapped[EventScanPriority | None] = relationship(
         back_populates="event",
         cascade="all, delete-orphan",
@@ -176,6 +180,21 @@ class EventScanPriority(TimestampMixin, Base):
     reason: Mapped[str] = mapped_column(String(1000))
 
     event: Mapped[Event] = relationship(back_populates="scan_priority")
+
+
+class MarketQualityCheck(Base):
+    __tablename__ = "market_quality_checks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    market_type: Mapped[str] = mapped_column(String(64), index=True)
+    line: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    confidence_score: Mapped[Decimal] = mapped_column(Numeric(5, 4))
+    reasons: Mapped[dict[str, object]] = mapped_column(JSON, default=dict, server_default="{}")
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    event: Mapped[Event] = relationship(back_populates="quality_checks")
 
 
 class ArbitrageOpportunity(Base):

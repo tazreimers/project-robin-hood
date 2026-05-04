@@ -31,6 +31,7 @@ This document summarizes the current SQLAlchemy models and database tables.
 - `scan_runs`: Tracks background scan execution, counts processed by the scan, completion timestamp, and any error message.
 - `api_usage_logs`: Tracks provider API quota headers, estimated request cost, endpoint, sport key, regions, markets, and capture timestamp.
 - `event_scan_priorities`: Tracks adaptive polling priority, next scan time, last scan time, and the reason for each scheduled event.
+- `market_quality_checks`: Tracks market confidence, quality status, rejection or warning reasons, and per-leg freshness metadata for candidate opportunities.
 
 ## Migrations
 

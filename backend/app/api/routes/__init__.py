@@ -28,6 +28,7 @@ from app.models import (
     Event,
     EventScanPriority,
     MarketAlias,
+    MarketQualityCheck,
     OddsSnapshot,
     OpportunityAction,
     ScanRun,
@@ -58,6 +59,7 @@ from app.schemas.odds import (
 )
 from app.schemas.scan_priority import EventScanPriorityRead
 from app.schemas.dashboard import BookmakerPairMetricRead, DashboardMetricsRead, RecentActivityRead
+from app.schemas.quality import MarketQualityCheckRead
 from app.schemas.scanner import ScanRunRead
 from app.services.health import get_health
 from app.services.normalization import canonical_sport_key, cleanup_key
@@ -131,6 +133,15 @@ def list_scan_priorities(db: Session = Depends(get_db)) -> list[EventScanPriorit
     scheduler.refresh_priorities()
     db.commit()
     return scheduler.list_priorities()
+
+
+@router.get("/quality-checks", response_model=list[MarketQualityCheckRead])
+def list_quality_checks(db: Session = Depends(get_db)) -> list[MarketQualityCheck]:
+    return list(
+        db.scalars(
+            select(MarketQualityCheck).order_by(MarketQualityCheck.checked_at.desc(), MarketQualityCheck.id.desc())
+        ).all()
+    )
 
 
 @router.get("/bookmakers", response_model=list[BookmakerRead])
@@ -630,6 +641,9 @@ def build_opportunity_instructions(
         if source_last_seen_at is not None:
             source_last_seen_at = ensure_aware(source_last_seen_at)
             odds_age_seconds = max(0, int((now - source_last_seen_at).total_seconds()))
+        freshness_status = "STALE"
+        if odds_age_seconds is not None and odds_age_seconds <= get_settings().max_odds_age_seconds:
+            freshness_status = "VERIFIED"
 
         instruction = (
             f"Bet AUD {leg.stake} on {leg.outcome_name} at {leg.bookmaker.name} "
@@ -645,10 +659,12 @@ def build_opportunity_instructions(
                 expected_return=leg.expected_return,
                 source_last_seen_at=source_last_seen_at,
                 odds_age_seconds=odds_age_seconds,
+                freshness_status=freshness_status,
                 instruction=instruction,
             )
         )
 
+    quality_check = get_latest_quality_check(db, opportunity)
     return OpportunityInstructionsRead(
         id=opportunity.id,
         event=EventRead.model_validate(opportunity.event),
@@ -658,6 +674,7 @@ def build_opportunity_instructions(
         guaranteed_profit=opportunity.guaranteed_profit,
         guaranteed_return=opportunity.guaranteed_return,
         margin=opportunity.margin,
+        quality_check=MarketQualityCheckRead.model_validate(quality_check) if quality_check else None,
         legs=instruction_legs,
         instructions=[
             "Open each bookmaker manually before placing any bet.",
@@ -667,6 +684,20 @@ def build_opportunity_instructions(
         ],
         warning="Re-check odds manually before placing any bet. Do not place a bet if the odds have changed.",
     )
+
+
+def get_latest_quality_check(db: Session, opportunity: ArbitrageOpportunity) -> MarketQualityCheck | None:
+    query = (
+        select(MarketQualityCheck)
+        .where(MarketQualityCheck.event_id == opportunity.event_id)
+        .where(MarketQualityCheck.market_type == opportunity.market_type)
+        .order_by(MarketQualityCheck.checked_at.desc(), MarketQualityCheck.id.desc())
+        .limit(1)
+    )
+    query = query.where(MarketQualityCheck.line.is_(None)) if opportunity.line is None else query.where(
+        MarketQualityCheck.line == opportunity.line
+    )
+    return db.scalar(query)
 
 
 def get_leg_source_last_seen_at(

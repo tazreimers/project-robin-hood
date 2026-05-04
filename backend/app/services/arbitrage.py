@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.models import ArbitrageLeg, ArbitrageOpportunity, OddsSnapshot
+from app.services.market_quality import MarketQualityService
 from app.services.opportunity_validator import OpportunityValidator
 
 IMPLIED_PROBABILITY_PRECISION = Decimal("0.000001")
@@ -58,6 +59,7 @@ class ArbitrageDetectionSummary:
     legs_created: int = 0
     opportunities_expired: int = 0
     stale_snapshots_ignored: int = 0
+    quality_rejected: int = 0
 
     def as_dict(self) -> dict[str, int]:
         return {
@@ -66,6 +68,7 @@ class ArbitrageDetectionSummary:
             "legs_created": self.legs_created,
             "opportunities_expired": self.opportunities_expired,
             "stale_snapshots_ignored": self.stale_snapshots_ignored,
+            "quality_rejected": self.quality_rejected,
         }
 
 
@@ -106,6 +109,7 @@ class ArbitrageDetectionService:
         self.settings = settings or get_settings()
         self.total_stake = quantize_money(self.settings.default_total_stake)
         self.min_margin = Decimal(str(self.settings.min_arbitrage_margin))
+        self.min_market_confidence = Decimal(str(self.settings.min_market_confidence))
         self.max_odds_age_seconds = self.settings.max_odds_age_seconds
 
     def detect(self, now: datetime | None = None) -> ArbitrageDetectionSummary:
@@ -124,6 +128,17 @@ class ArbitrageDetectionService:
                 continue
 
             event_id, market_type, line = market_key
+            quality_result = MarketQualityService(self.db, settings=self.settings).validate_market(
+                event_id=event_id,
+                market_type=market_type,
+                line=line,
+                snapshots=market_snapshots,
+                checked_at=detected_at,
+            )
+            if quality_result.confidence_score < self.min_market_confidence:
+                summary.quality_rejected += 1
+                continue
+
             self._create_opportunity(
                 event_id=event_id,
                 market_type=market_type,

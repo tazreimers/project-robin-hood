@@ -1,0 +1,64 @@
+Implement a data quality layer to reduce false arbitrage opportunities.
+
+Read AGENTS.md first.
+
+Goal:
+Only show opportunities that are likely to be real and actionable.
+
+Backend tasks:
+
+1. Add model: MarketQualityCheck
+Fields:
+- id
+- event_id
+- market_type
+- line
+- status
+- confidence_score
+- reasons JSON
+- checked_at
+
+2. Create service:
+backend/app/services/market_quality.py
+
+It should validate:
+- all outcomes required for the market are present
+- market type matches across bookmakers
+- line matches exactly for line markets
+- event start times are close enough
+- odds are fresh
+- no leg is suspended
+- duplicate outcomes are handled
+- decimal odds are valid and above 1.01
+
+3. Update arbitrage detection:
+Before saving opportunity, run market quality check.
+Only save opportunities if confidence_score >= MIN_MARKET_CONFIDENCE.
+
+4. Add config:
+- MIN_MARKET_CONFIDENCE=0.85
+- MAX_EVENT_START_TIME_DIFF_MINUTES=5
+- MAX_ODDS_AGE_SECONDS=60
+
+5. Add endpoint:
+GET /quality-checks
+
+Frontend:
+On opportunity detail page, show:
+- confidence score
+- quality status
+- reasons
+- freshness per leg
+
+Add chips:
+- VERIFIED
+- RISKY
+- STALE
+- REJECTED
+
+Tests:
+- mismatched line rejected
+- stale odds rejected
+- missing outcome rejected
+- valid two-way market accepted
+- valid three-way market accepted

@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.quality import MarketQualityCheckRead
+
 
 class BookmakerRead(BaseModel):
     id: int
@@ -238,6 +240,7 @@ class OpportunityInstructionLegRead(BaseModel):
     expected_return: Decimal
     source_last_seen_at: datetime | None
     odds_age_seconds: int | None
+    freshness_status: str
     instruction: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -252,6 +255,7 @@ class OpportunityInstructionsRead(BaseModel):
     guaranteed_profit: Decimal
     guaranteed_return: Decimal
     margin: Decimal
+    quality_check: MarketQualityCheckRead | None = None
     legs: list[OpportunityInstructionLegRead] = Field(default_factory=list)
     instructions: list[str] = Field(default_factory=list)
     warning: str

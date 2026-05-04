@@ -166,6 +166,47 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
       {actionError ? <Alert severity="error">{actionError}</Alert> : null}
 
+      <Card sx={{ border: 1, borderColor: "divider" }}>
+        <CardContent>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            sx={{ alignItems: { xs: "stretch", md: "flex-start" }, justifyContent: "space-between" }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }} useFlexGap>
+                <Typography variant="h6">Market quality</Typography>
+                {instructions.quality_check ? (
+                  <Chip
+                    size="small"
+                    label={instructions.quality_check.status}
+                    color={qualityColor(instructions.quality_check.status)}
+                  />
+                ) : (
+                  <Chip size="small" label="RISKY" color="warning" />
+                )}
+              </Stack>
+              <Stack spacing={0.75} sx={{ mt: 1.5 }}>
+                {qualityReasons(instructions.quality_check).map((reason) => (
+                  <Typography key={reason} color="text.secondary" variant="body2">
+                    {reason}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
+            <Metric
+              label="Confidence"
+              value={
+                instructions.quality_check
+                  ? `${(Number(instructions.quality_check.confidence_score) * 100).toFixed(0)}%`
+                  : "N/A"
+              }
+              emphasis
+            />
+          </Stack>
+        </CardContent>
+      </Card>
+
       <Grid container spacing={2}>
         {instructions.legs.map((leg) => (
           <Grid size={{ xs: 12, md: 6, lg: 4 }} key={leg.id}>
@@ -191,6 +232,12 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                         {leg.outcome_name}
                       </Typography>
                     </Box>
+                    <Chip
+                      size="small"
+                      label={leg.freshness_status}
+                      color={qualityColor(leg.freshness_status)}
+                      sx={{ ml: "auto" }}
+                    />
                   </Stack>
 
                   <Divider />
@@ -225,6 +272,9 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                       </Typography>
                     </Box>
                   </Stack>
+                  <Typography color="text.secondary" variant="body2">
+                    Freshness: {leg.odds_age_seconds === null ? "unknown" : `${leg.odds_age_seconds}s old`}
+                  </Typography>
                 </Stack>
               </CardContent>
             </Card>
@@ -286,6 +336,31 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       />
     </Stack>
   );
+}
+
+function qualityReasons(qualityCheck: OpportunityInstructions["quality_check"]) {
+  if (!qualityCheck) {
+    return ["No quality check was recorded for this opportunity."];
+  }
+
+  const failures = qualityCheck.reasons.failures ?? [];
+  const warnings = qualityCheck.reasons.warnings ?? [];
+  const checks = qualityCheck.reasons.checks ?? [];
+  const reasons = [...failures, ...warnings, ...checks].filter(Boolean);
+  return reasons.length ? reasons : ["No quality reasons were recorded."];
+}
+
+function qualityColor(status: string): "success" | "warning" | "error" | "default" {
+  if (status === "VERIFIED") {
+    return "success";
+  }
+  if (status === "RISKY" || status === "STALE") {
+    return "warning";
+  }
+  if (status === "REJECTED") {
+    return "error";
+  }
+  return "default";
 }
 
 function Metric({

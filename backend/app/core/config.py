@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     high_priority_scan_seconds: int = 60
     urgent_priority_scan_seconds: int = 30
     near_arb_threshold: Decimal = Decimal("0.03")
+    min_market_confidence: Decimal = Decimal("0.85")
+    max_event_start_time_diff_minutes: int = 5
     cors_origins: list[str] = ["http://localhost:3000"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

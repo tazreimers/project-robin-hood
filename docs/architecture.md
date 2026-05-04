@@ -34,10 +34,11 @@ Docker Compose wires these services together for local development.
 4. Celery fetches odds through provider adapters.
 5. Provider responses log quota headers to `api_usage_logs`.
 6. Odds ingestion normalizes teams, events, and markets before persisting sports, events, bookmakers, markets, outcomes, and snapshots.
-7. Arbitrage detection evaluates recent odds snapshots and creates opportunity rows and legs.
-8. Adaptive scan priorities are refreshed for upcoming events based on event start time, near-arb signals, recent arbitrage, and odds movement.
-9. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
-10. The frontend reads active opportunities and displays manual execution instructions.
+7. Market quality checks reject stale, incomplete, mismatched, suspended, or invalid candidate markets before opportunities are saved.
+8. Arbitrage detection evaluates recent quality-approved odds snapshots and creates opportunity rows and legs.
+9. Adaptive scan priorities are refreshed for upcoming events based on event start time, near-arb signals, recent arbitrage, and odds movement.
+10. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
+11. The frontend reads active opportunities and displays manual execution instructions.
 
 ## Adaptive Scan Flow
 

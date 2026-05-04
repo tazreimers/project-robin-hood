@@ -6,6 +6,7 @@ import type {
   DashboardMetrics,
   EventScanPriority,
   HealthResponse,
+  MarketQualityCheck,
   OpportunityAction,
   OpportunityInstructions,
   ScanRun,
@@ -24,6 +25,9 @@ export type {
   EventRead,
   EventScanPriority,
   HealthResponse,
+  MarketQualityCheck,
+  MarketQualityReasons,
+  MarketQualityStatus,
   OpportunityAction,
   OpportunityInstructionLeg,
   OpportunityInstructions,
@@ -71,6 +75,10 @@ export function getApiUsage() {
 
 export function getScanPriorities() {
   return fetchJson<EventScanPriority[]>("/scan-priorities");
+}
+
+export function getQualityChecks() {
+  return fetchJson<MarketQualityCheck[]>("/quality-checks");
 }
 
 export function startAdaptiveScan() {
