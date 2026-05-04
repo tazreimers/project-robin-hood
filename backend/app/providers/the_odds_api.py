@@ -74,6 +74,7 @@ class TheOddsApiProvider(OddsProvider):
         return sports
 
     def fetch_odds(self, sport_key: str) -> list[ProviderEvent]:
+        """Fetch decimal head-to-head odds for one configured sport key."""
         provider_sport_key = SPORT_KEY_ALIASES.get(sport_key, sport_key)
         endpoint = f"/v4/sports/{provider_sport_key}/odds/"
         regions = self.settings.odds_regions
@@ -141,6 +142,7 @@ class TheOddsApiProvider(OddsProvider):
         headers: httpx.Headers,
         estimated_cost: int,
     ) -> None:
+        """Forward quota headers to the quota guard without coupling the provider to the database."""
         if self.usage_callback is None:
             return
 

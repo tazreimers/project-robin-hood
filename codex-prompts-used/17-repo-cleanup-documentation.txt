@@ -1,0 +1,556 @@
+Read AGENTS.md first and preserve the existing architecture and safety boundaries.
+
+Goal:
+Clean up the repository so a new developer can clone it, bootstrap it, understand it, and safely contribute within 30 minutes.
+
+This task is focused on:
+- repository cleanup
+- developer onboarding
+- bootstrap scripts
+- user documentation
+- in-app documentation/help
+- code comments/docstrings
+- preparing the frontend structure for a larger UI
+- improving maintainability
+
+Do not change product behaviour unless required for cleanup.
+Do not add automatic betting, bookmaker login automation, captcha bypassing, KYC bypassing, geolocation bypassing, self-exclusion bypassing, or anti-bot bypassing.
+
+---
+
+# 1. Repository cleanup
+
+Review the current repository structure and clean up obvious inconsistencies.
+
+Tasks:
+- remove unused files
+- remove dead code
+- remove duplicate helpers
+- remove unused imports
+- standardise naming
+- ensure backend files use snake_case
+- ensure frontend components use PascalCase
+- ensure frontend hooks use useSomething.ts
+- ensure shared types live in frontend/types
+- ensure shared API client code lives in frontend/lib
+- ensure reusable UI lives in frontend/components
+- ensure feature-specific UI lives in frontend/features
+- ensure backend routes live under backend/app/api/routes
+- ensure backend business logic lives under backend/app/services
+- ensure backend provider adapters live under backend/app/providers
+- ensure backend jobs live under backend/app/jobs
+- ensure backend config lives under backend/app/core
+- ensure backend database/session setup lives under backend/app/db
+
+Do not do a massive rewrite.
+Prefer small, safe moves with updated imports.
+
+---
+
+# 2. Add bootstrap scripts
+
+Add a root-level scripts directory:
+
+scripts/
+  bootstrap.sh
+  dev.sh
+  test.sh
+  lint.sh
+  format.sh
+  reset_local.sh
+  seed_local.sh
+  check_env.sh
+
+Each script should be POSIX-friendly bash.
+
+bootstrap.sh should:
+- check Docker is installed
+- check Docker Compose is available
+- check Node is installed if frontend needs local install
+- check Python is installed if backend needs local tooling
+- create .env from .env.example if missing
+- print clear next steps
+- avoid overwriting existing .env
+
+dev.sh should:
+- start the full local stack with Docker Compose
+- print frontend URL
+- print backend URL
+- print API docs URL
+
+test.sh should:
+- run backend tests
+- run frontend tests if configured
+- print clear pass/fail status
+
+lint.sh should:
+- run backend linting if configured
+- run frontend linting if configured
+
+format.sh should:
+- run backend formatting if configured
+- run frontend formatting if configured
+
+reset_local.sh should:
+- warn the user
+- reset local Docker volumes/database
+- rerun migrations
+- optionally seed local data
+
+seed_local.sh should:
+- add useful local demo data if seed support exists
+- create a small set of fake sports, events, bookmakers, odds, and arbitrage opportunities
+- make the UI usable without a live API key
+
+check_env.sh should:
+- validate required environment variables
+- print missing variables
+- explain which are optional
+
+Update file permissions so scripts are executable.
+
+---
+
+# 3. Environment documentation
+
+Add or update:
+
+.env.example
+
+Include clear comments for every variable:
+
+DATABASE_URL=
+REDIS_URL=
+ODDS_API_KEY=
+SPORT_KEYS=
+DEFAULT_TOTAL_STAKE=
+MIN_ARBITRAGE_MARGIN=
+MAX_ODDS_AGE_SECONDS=
+DAILY_QUOTA_BUDGET=
+MIN_REQUESTS_REMAINING_BUFFER=
+MAX_SCANS_PER_HOUR=
+ENABLE_QUOTA_GUARD=
+LOW_PRIORITY_SCAN_MINUTES=
+NORMAL_PRIORITY_SCAN_MINUTES=
+HIGH_PRIORITY_SCAN_SECONDS=
+URGENT_PRIORITY_SCAN_SECONDS=
+NEAR_ARB_THRESHOLD=
+MIN_MARKET_CONFIDENCE=
+MAX_EVENT_START_TIME_DIFF_MINUTES=
+
+Add sensible local defaults where safe.
+
+Never commit real API keys.
+
+---
+
+# 4. Developer documentation
+
+Create or update these Markdown files:
+
+docs/
+  getting-started.md
+  architecture.md
+  backend.md
+  frontend.md
+  data-model.md
+  api-contracts.md
+  scanning-and-quota.md
+  arbitrage-logic.md
+  normalisation.md
+  testing.md
+  troubleshooting.md
+  safety-and-compliance.md
+  contributing.md
+
+Each file should be practical and written for a new developer.
+
+getting-started.md should include:
+- prerequisites
+- clone instructions
+- bootstrap command
+- running the app
+- running tests
+- where to find frontend/backend/API docs
+- common first tasks
+
+architecture.md should explain:
+- system overview
+- backend/API
+- worker
+- Redis
+- Postgres
+- frontend
+- external odds providers
+- data flow from scan to opportunity
+
+backend.md should explain:
+- folder structure
+- how routes, services, providers, jobs, models, and schemas fit together
+- where to add a new endpoint
+- where to add a new provider
+- where to add business logic
+
+frontend.md should explain:
+- folder structure
+- app routes
+- components
+- features
+- hooks
+- lib/api.ts
+- types
+- theme
+- how to add a new page
+- how to add a new reusable component
+
+data-model.md should explain:
+- main tables
+- relationships
+- ScanRun
+- OddsSnapshot
+- ArbitrageOpportunity
+- ArbitrageLeg
+- ApiUsageLog
+- OpportunityExecution
+- ExecutionLeg
+- normalisation/alias tables if present
+
+api-contracts.md should list:
+- every current endpoint
+- method
+- path
+- purpose
+- example response shape where useful
+
+scanning-and-quota.md should explain:
+- manual scan
+- adaptive scan
+- quota guard
+- provider usage headers
+- why real-time polling is expensive
+- recommended polling strategy
+
+arbitrage-logic.md should explain:
+- two-way arbitrage formula
+- three-way arbitrage formula
+- implied probability total
+- margin
+- stake allocation
+- stale odds filter
+- examples
+
+normalisation.md should explain:
+- why normalisation matters
+- team aliases
+- market aliases
+- event matching confidence
+- common failure cases
+
+testing.md should explain:
+- backend tests
+- frontend tests
+- how to run all tests
+- what must always be tested
+
+troubleshooting.md should include:
+- Docker not running
+- database connection failed
+- migrations failed
+- Redis not reachable
+- frontend cannot reach backend
+- API key missing
+- quota exhausted
+- no opportunities found
+
+safety-and-compliance.md should clearly state:
+- this app provides analytics and manual bet instructions only
+- do not automate bookmaker login
+- do not automate bet placement
+- do not bypass captcha
+- do not bypass KYC
+- do not bypass geolocation controls
+- do not bypass responsible gambling controls
+- prefer official APIs and permitted data feeds
+- check legal and bookmaker terms before adding providers
+
+contributing.md should include:
+- branch naming
+- commit style
+- pull request checklist
+- testing expectations
+- documentation expectations
+- safety checklist
+
+---
+
+# 5. README overhaul
+
+Rewrite README.md to be genuinely useful.
+
+Include:
+- project name
+- short description
+- screenshot placeholder or UI description
+- tech stack
+- quick start
+- bootstrap command
+- common commands
+- folder structure
+- links to docs
+- safety boundaries
+- current MVP limitations
+- roadmap
+
+Keep README concise and link to docs for detail.
+
+---
+
+# 6. In-app documentation/help
+
+Add an in-app help/docs section.
+
+Frontend tasks:
+
+Create route:
+frontend/app/help/page.tsx
+
+Create a user-friendly help centre with sections:
+- What this app does
+- How scans work
+- What an arbitrage opportunity means
+- How to read an opportunity
+- Why odds can go stale
+- What API quota means
+- Manual execution checklist
+- Troubleshooting
+- Safety notes
+
+Use MUI components:
+- Cards
+- Accordions
+- Typography
+- Alerts
+- Chips
+
+Add sidebar navigation item:
+Help
+
+Add small help tooltips in key UI areas:
+- Run Scan button
+- API quota card
+- Margin column
+- Guaranteed profit
+- Fresh/stale status
+- Execution screen
+
+Create reusable component:
+frontend/components/help/InfoTooltip.tsx
+
+Create reusable component:
+frontend/components/help/HelpCallout.tsx
+
+---
+
+# 7. Prepare frontend for extensive UI
+
+Refactor frontend structure to support a larger app.
+
+Target structure:
+
+frontend/
+  app/
+    page.tsx
+    opportunities/
+    scan-runs/
+    scan-priorities/
+    executions/
+    api-usage/
+    help/
+  components/
+    layout/
+      AppShell.tsx
+      AppSidebar.tsx
+      AppTopBar.tsx
+      PageHeader.tsx
+    common/
+      EmptyState.tsx
+      ErrorState.tsx
+      LoadingState.tsx
+      StatusChip.tsx
+      MetricCard.tsx
+      ConfirmDialog.tsx
+    help/
+      InfoTooltip.tsx
+      HelpCallout.tsx
+  features/
+    dashboard/
+    opportunities/
+    scans/
+    quota/
+    executions/
+    settings/
+  hooks/
+    useApiHealth.ts
+    useAutoRefresh.ts
+    useLocalStorage.ts
+  lib/
+    api.ts
+    formatting.ts
+    constants.ts
+  theme/
+    index.ts
+    palette.ts
+  types/
+    api.ts
+    domain.ts
+
+Move existing code into this structure where appropriate.
+
+Do not over-engineer.
+Do not introduce Redux.
+Use React hooks and small reusable components.
+
+---
+
+# 8. Add friendly empty, loading, and error states
+
+Implement consistent user states across the UI.
+
+Create:
+- LoadingState
+- EmptyState
+- ErrorState
+
+Use them on:
+- Dashboard
+- Opportunities page
+- Opportunity detail page
+- Scan runs page
+- API usage page
+- Help page where applicable
+
+Empty states should explain what the user can do next.
+
+Examples:
+- "No opportunities found yet. Run a scan to check the latest odds."
+- "No scan runs yet. Start your first scan from the dashboard."
+- "No API usage recorded yet. Usage will appear after your first odds request."
+
+---
+
+# 9. Add comments and docstrings
+
+Improve code readability without adding noise.
+
+Backend:
+- Add docstrings to public service functions
+- Add comments around arbitrage math
+- Add comments around quota calculations
+- Add comments around normalisation/event matching
+- Add comments around provider adapters
+- Add comments around Celery jobs
+
+Frontend:
+- Add concise comments for non-obvious hooks
+- Add comments for API helper behaviour
+- Add comments where UI state handling is complex
+
+Avoid obvious comments like:
+- "set loading to true"
+- "return response"
+
+Focus on why the code exists, not what every line does.
+
+---
+
+# 10. Add local seed/demo mode
+
+Make the app useful without an API key.
+
+Tasks:
+- Add backend seed script or command that creates demo data
+- Add fake bookmakers
+- Add fake AFL events
+- Add fake odds snapshots
+- Add at least one valid arbitrage opportunity
+- Add at least one stale opportunity
+- Add at least one rejected/low-confidence example if supported
+
+Expose command through:
+scripts/seed_local.sh
+
+Document it in:
+README.md
+docs/getting-started.md
+docs/troubleshooting.md
+
+The frontend should clearly indicate demo data if applicable.
+
+---
+
+# 11. Developer experience improvements
+
+Add Makefile at repo root with commands:
+
+make bootstrap
+make dev
+make test
+make lint
+make format
+make reset
+make seed
+make docs
+
+Each target should call the relevant script.
+
+Add clear command output.
+
+Add .editorconfig if missing.
+
+Add or update .gitignore for:
+- .env
+- node_modules
+- Python caches
+- build outputs
+- coverage
+- local database files
+- logs
+
+---
+
+# 12. Verification
+
+After changes:
+
+1. Run formatting if available.
+2. Run linting if available.
+3. Run backend tests.
+4. Run frontend tests if available.
+5. Build frontend.
+6. Start app with Docker Compose if possible.
+7. Confirm:
+   - backend health endpoint works
+   - frontend loads
+   - help page loads
+   - dashboard loads
+   - seed script works
+   - README quick start is accurate
+
+Fix any broken imports or obvious errors.
+
+---
+
+# 13. Final output
+
+When complete, summarize:
+- files added
+- files moved
+- docs added
+- scripts added
+- how to bootstrap locally
+- any tests/builds run
+- any known issues
+
+Remember:
+This is a cleanup, documentation, onboarding, and maintainability task.
+Do not alter arbitrage formulas or product behaviour unless required to fix broken structure.

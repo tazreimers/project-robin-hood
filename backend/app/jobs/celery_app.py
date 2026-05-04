@@ -15,7 +15,6 @@ celery_app = Celery(
         "app.jobs.detect_arbitrage",
         "app.jobs.fetch_odds",
         "app.jobs.scan_now",
-        "app.jobs.scan_odds",
     ],
 )
 

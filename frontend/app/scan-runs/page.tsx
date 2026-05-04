@@ -1,10 +1,6 @@
 "use client";
 
 import {
-  Alert,
-  Box,
-  Chip,
-  CircularProgress,
   Paper,
   Stack,
   Table,
@@ -13,12 +9,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import { formatDateTime, getScanRuns } from "../../lib/api";
 import type { ScanRun } from "../../types/api";
+import EmptyState from "../../components/common/EmptyState";
+import ErrorState from "../../components/common/ErrorState";
+import LoadingState from "../../components/common/LoadingState";
+import StatusChip from "../../components/common/StatusChip";
+import PageHeader from "../../components/layout/PageHeader";
 
 export default function ScanRunsPage() {
   const [scanRuns, setScanRuns] = useState<ScanRun[]>([]);
@@ -44,16 +44,9 @@ export default function ScanRunsPage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Scan Runs
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-          Recent scan history and processing results.
-        </Typography>
-      </Box>
+      <PageHeader title="Scan Runs" description="Recent scan history and processing results." />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error ? <ErrorState message={error} onRetry={() => void loadScanRuns()} /> : null}
 
       <TableContainer component={Paper}>
         <Table>
@@ -71,17 +64,16 @@ export default function ScanRunsPage() {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={6}>
-                  <Stack sx={{ alignItems: "center", py: 4 }}>
-                    <CircularProgress />
-                  </Stack>
+                  <LoadingState message="Loading scan runs..." />
                 </TableCell>
               </TableRow>
             ) : scanRuns.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6}>
-                  <Typography color="text.secondary" sx={{ py: 2 }}>
-                    No scans have run yet.
-                  </Typography>
+                  <EmptyState
+                    title="No scan runs yet"
+                    message="Start your first scan from the dashboard or the top bar."
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -89,7 +81,7 @@ export default function ScanRunsPage() {
                 <TableRow hover key={scanRun.id}>
                   <TableCell>#{scanRun.scan_id}</TableCell>
                   <TableCell>
-                    <Chip size="small" label={scanRun.status} color={statusColor(scanRun.status)} />
+                    <StatusChip status={scanRun.status} />
                   </TableCell>
                   <TableCell>{scanRun.events_processed}</TableCell>
                   <TableCell>{scanRun.opportunities_found}</TableCell>
@@ -103,20 +95,4 @@ export default function ScanRunsPage() {
       </TableContainer>
     </Stack>
   );
-}
-
-function statusColor(status: string): "success" | "warning" | "error" | "default" {
-  if (status === "completed") {
-    return "success";
-  }
-
-  if (status === "queued" || status === "running") {
-    return "warning";
-  }
-
-  if (status === "failed") {
-    return "error";
-  }
-
-  return "default";
 }

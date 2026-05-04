@@ -15,6 +15,8 @@ import type {
   OpportunityInstructions,
   ScanRun,
 } from "../types/api";
+import { API_URL } from "./constants";
+import { formatDateTime, formatMoney, formatPercent } from "./formatting";
 
 export type {
   ActiveArbitrageLeg,
@@ -49,10 +51,9 @@ export type {
   ValidationStatus,
 } from "../types/api";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, { cache: "no-store", ...init });
+  // API requests are intentionally uncached so scanner state and quota data stay current.
+  const response = await fetch(`${API_URL}${path}`, { cache: "no-store", ...init });
   if (!response.ok) {
     throw new Error(`API returned ${response.status}`);
   }
@@ -165,25 +166,4 @@ export function updateBetRecord(betRecordId: number, payload: Partial<BetRecordP
   });
 }
 
-export function formatDateTime(value: string | null) {
-  if (!value) {
-    return "Not completed";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-export function formatMoney(value: string | number) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "AUD",
-    maximumFractionDigits: 2,
-  }).format(Number(value));
-}
-
-export function formatPercent(value: string) {
-  return `${(Number(value) * 100).toFixed(2)}%`;
-}
+export { formatDateTime, formatMoney, formatPercent };

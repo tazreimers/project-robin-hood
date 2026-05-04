@@ -1,7 +1,7 @@
 """create market quality checks
 
-Revision ID: 0008_create_market_quality_checks
-Revises: 0007_create_event_scan_priorities
+Revision ID: 0008_quality_checks
+Revises: 0007_scan_priorities
 Create Date: 2026-05-04 00:00:00.000000
 """
 
@@ -10,8 +10,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "0008_create_market_quality_checks"
-down_revision: Union[str, None] = "0007_create_event_scan_priorities"
+revision: str = "0008_quality_checks"
+down_revision: Union[str, None] = "0007_scan_priorities"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

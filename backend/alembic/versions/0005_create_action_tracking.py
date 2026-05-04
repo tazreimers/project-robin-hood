@@ -1,7 +1,7 @@
 """create action tracking
 
-Revision ID: 0005_create_action_tracking
-Revises: 0004_create_normalization_aliases
+Revision ID: 0005_action_tracking
+Revises: 0004_normalization_aliases
 Create Date: 2026-05-02 00:00:00.000000
 """
 
@@ -10,8 +10,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "0005_create_action_tracking"
-down_revision: Union[str, None] = "0004_create_normalization_aliases"
+revision: str = "0005_action_tracking"
+down_revision: Union[str, None] = "0004_normalization_aliases"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

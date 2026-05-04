@@ -1,10 +1,6 @@
 "use client";
 
 import {
-  Alert,
-  Box,
-  Chip,
-  CircularProgress,
   Paper,
   Stack,
   Table,
@@ -13,12 +9,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
 import { formatDateTime, getScanPriorities } from "../../lib/api";
 import type { EventScanPriority } from "../../types/api";
+import EmptyState from "../../components/common/EmptyState";
+import ErrorState from "../../components/common/ErrorState";
+import LoadingState from "../../components/common/LoadingState";
+import StatusChip from "../../components/common/StatusChip";
+import PageHeader from "../../components/layout/PageHeader";
 
 export default function ScanPrioritiesPage() {
   const [priorities, setPriorities] = useState<EventScanPriority[]>([]);
@@ -44,16 +44,9 @@ export default function ScanPrioritiesPage() {
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          Scan Priorities
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-          Adaptive polling schedule for upcoming events.
-        </Typography>
-      </Box>
+      <PageHeader title="Scan Priorities" description="Adaptive polling schedule for upcoming events." />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      {error ? <ErrorState message={error} onRetry={() => void loadPriorities()} /> : null}
 
       <TableContainer component={Paper}>
         <Table>
@@ -70,17 +63,16 @@ export default function ScanPrioritiesPage() {
             {loading ? (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <Stack sx={{ alignItems: "center", py: 4 }}>
-                    <CircularProgress />
-                  </Stack>
+                  <LoadingState message="Loading scan priorities..." />
                 </TableCell>
               </TableRow>
             ) : priorities.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <Typography color="text.secondary" sx={{ py: 2 }}>
-                    No scan priorities have been scheduled.
-                  </Typography>
+                  <EmptyState
+                    title="No scan priorities scheduled"
+                    message="Run a scan or seed demo data to create upcoming events with adaptive schedules."
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -91,11 +83,7 @@ export default function ScanPrioritiesPage() {
                   </TableCell>
                   <TableCell>{formatDateTime(priority.event.start_time)}</TableCell>
                   <TableCell>
-                    <Chip
-                      size="small"
-                      label={priority.priority_level}
-                      color={priorityColor(priority.priority_level)}
-                    />
+                    <StatusChip status={priority.priority_level} />
                   </TableCell>
                   <TableCell>{priority.next_scan_at ? formatDateTime(priority.next_scan_at) : "Not scheduled"}</TableCell>
                   <TableCell>{priority.reason}</TableCell>
@@ -107,17 +95,4 @@ export default function ScanPrioritiesPage() {
       </TableContainer>
     </Stack>
   );
-}
-
-function priorityColor(priority: EventScanPriority["priority_level"]): "success" | "warning" | "error" | "default" {
-  if (priority === "URGENT") {
-    return "error";
-  }
-  if (priority === "HIGH") {
-    return "warning";
-  }
-  if (priority === "NORMAL") {
-    return "success";
-  }
-  return "default";
 }

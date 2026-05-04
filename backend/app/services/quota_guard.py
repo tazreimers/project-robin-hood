@@ -32,6 +32,7 @@ class QuotaGuard:
         exclude_scan_run_id: int | None = None,
         sport_keys: list[str] | None = None,
     ) -> QuotaGuardDecision:
+        """Decide whether a scan can run without exceeding local quota protections."""
         estimated_cost = self.estimate_scan_cost(sport_keys=sport_keys)
         if not self.settings.enable_quota_guard:
             return QuotaGuardDecision(allowed=True, estimated_cost=estimated_cost)
@@ -84,6 +85,7 @@ class QuotaGuard:
         regions: str | None = None,
         markets: str | None = None,
     ) -> int:
+        """Estimate provider credits for a scan before issuing API calls."""
         scan_sport_keys = sport_keys if sport_keys is not None else self.settings.sport_key_list
         request_cost = estimate_request_cost(
             regions=regions if regions is not None else self.settings.odds_regions,
@@ -164,6 +166,7 @@ class QuotaGuard:
 
 
 def estimate_request_cost(regions: str, markets: str) -> int:
+    """The Odds API charges by region x market for each sport odds request."""
     region_count = len([region.strip() for region in regions.split(",") if region.strip()])
     market_count = len([market.strip() for market in markets.split(",") if market.strip()])
     if region_count == 0 or market_count == 0:

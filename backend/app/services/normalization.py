@@ -59,6 +59,7 @@ class NormalizationService:
         self.db = db
 
     def normalize_team_name(self, sport_key: str, team_name: str) -> NormalizedTeam:
+        """Resolve provider team names to canonical names using aliases before fuzzy fallback."""
         source_name = team_name.strip()
         aliases = self._team_aliases_for_sport(sport_key)
 
@@ -161,6 +162,7 @@ class NormalizationService:
         return self.normalize_event(provider_event).normalized_event_key
 
     def match_events(self, first: ProviderEvent, second: ProviderEvent) -> EventMatch:
+        """Compare provider events after normalization so minor naming differences do not split events."""
         first_event = self.normalize_event(first)
         second_event = self.normalize_event(second)
 

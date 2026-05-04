@@ -2,64 +2,48 @@
 
 Project Robin Hood is a local arbitrage odds scanner with a FastAPI backend, Celery worker, Postgres database, Redis broker, and Next.js frontend.
 
-## Runtime Services
+## System Overview
 
-- `api`: FastAPI application. It exposes scanner, opportunities, alias management, action logging, bet record, and dashboard endpoints.
-- `worker`: Celery worker. It runs background odds-fetching and arbitrage-detection jobs.
-- `postgres`: Persistent relational database for events, markets, odds snapshots, opportunities, aliases, scan runs, and tracking records.
+- `api`: FastAPI service exposing scanner, opportunities, quota, execution, alias, and dashboard endpoints.
+- `worker`: Celery worker for odds fetching, adaptive scans, and arbitrage detection.
+- `postgres`: Durable storage for events, odds snapshots, opportunities, logs, and manual tracking records.
 - `redis`: Celery broker and result backend.
-- `frontend`: Next.js application using React and MUI.
+- `frontend`: Next.js app for dashboards, opportunity review, manual execution, and help.
+- External providers: Official/permitted odds APIs under `backend/app/providers/`.
 
-Docker Compose wires these services together for local development.
+## Data Flow
 
-## Backend Layers
+1. A user starts a scan from the frontend or `POST /scan`.
+2. The quota guard estimates scan cost and checks daily budget, remaining request buffer, and scan frequency.
+3. The API creates a `ScanRun` and queues Celery work.
+4. Provider adapters fetch odds and capture quota headers.
+5. Odds ingestion normalises sport, event, team, market, bookmaker, and outcome data.
+6. Snapshots are stored in `odds_snapshots`.
+7. Market quality checks reject stale, incomplete, mismatched, suspended, or invalid markets.
+8. Arbitrage detection evaluates fresh quality-approved snapshots and saves opportunities and legs.
+9. Opportunity validation scores freshness and leg availability for the UI.
+10. The frontend displays opportunities and manual execution forms.
 
-- `backend/app/api/routes/`: FastAPI route handlers. These should stay thin and delegate real work.
-- `backend/app/api/dependencies.py`: API dependency wiring such as database sessions.
-- `backend/app/core/`: Settings, logging helpers, and shared constants.
-- `backend/app/db/`: SQLAlchemy declarative base and session/engine setup.
-- `backend/app/models/`: SQLAlchemy table models.
-- `backend/app/schemas/`: Pydantic request and response models.
-- `backend/app/services/`: Business logic for scanning, odds ingestion, arbitrage detection, normalization, validation, and health checks.
-- `backend/app/providers/`: External odds provider adapters and provider DTOs.
-- `backend/app/jobs/`: Celery app and background tasks.
-- `backend/app/tests/`: Backend unit tests.
-- `backend/alembic/`: Database migrations.
+## Backend/API
 
-## Scan Flow
+Routes live in `backend/app/api/routes/`. Route handlers should stay thin and delegate provider calls, quota checks, scan scheduling, market quality checks, and arbitrage logic to services.
 
-1. A user clicks Run Scan in the frontend or calls `POST /scan`.
-2. The API checks the quota guard for estimated cost, remaining quota buffer, daily budget, and scan frequency.
-3. If allowed, the API creates a `scan_runs` row and queues `scan_now`; if blocked, the scan run is returned with `status: "blocked"`.
-4. Celery fetches odds through provider adapters.
-5. Provider responses log quota headers to `api_usage_logs`.
-6. Odds ingestion normalizes teams, events, and markets before persisting sports, events, bookmakers, markets, outcomes, and snapshots.
-7. Market quality checks reject stale, incomplete, mismatched, suspended, or invalid candidate markets before opportunities are saved.
-8. Arbitrage detection evaluates recent quality-approved odds snapshots and creates opportunity rows and legs.
-9. Adaptive scan priorities are refreshed for upcoming events based on event start time, near-arb signals, recent arbitrage, and odds movement.
-10. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
-11. The frontend reads active opportunities and displays manual execution instructions.
+## Worker
 
-## Adaptive Scan Flow
+Celery tasks live in `backend/app/jobs/`. Jobs open their own database session, call services, commit successful work, and mark failures on the relevant run or task summary.
 
-1. `POST /jobs/adaptive-scan` queues the adaptive scan task.
-2. The scheduler refreshes `event_scan_priorities` and selects due upcoming events.
-3. The quota guard checks the estimated cost for the due sport keys only.
-4. The worker fetches odds for those due sports, runs arbitrage detection, and schedules each due event's next scan based on its priority.
-5. Expired events are left unscheduled.
+## Redis
 
-## Manual Tracking Flow
+Redis is used as the Celery broker/result backend. The app should not depend on Redis for durable business state.
 
-Users can log manual actions against an opportunity, create a manual execution plan from the recommended opportunity legs, record actual odds/stakes and leg statuses, and manually record settlement details later. Execution records power dashboard metrics such as actioned opportunities, expected profit, actual profit estimate, odds changed before action, and skipped opportunities. Bet records continue to power settled profit/loss metrics.
+## Postgres
 
-The system does not automate bookmaker account access or bet placement.
+Postgres stores normalized source data, snapshots, opportunities, quota logs, scan priorities, quality checks, and manual tracking records. Alembic migrations live in `backend/alembic/versions/`.
 
-## Frontend Layers
+## Frontend
 
-- `frontend/app/`: Next.js app routes and page composition.
-- `frontend/components/`: Shared UI components, including the application shell.
-- `frontend/features/`: Feature-specific components and helpers for larger UI areas.
-- `frontend/hooks/`: Shared React hooks.
-- `frontend/lib/api.ts`: API client functions and formatting helpers.
-- `frontend/theme/`: MUI theme configuration.
-- `frontend/types/`: Shared TypeScript types.
+The frontend is a Next.js app with MUI. Pages compose shared components from `frontend/components`, feature-specific code belongs under `frontend/features`, API calls live in `frontend/lib/api.ts`, and shared types live in `frontend/types`.
+
+## Safety Boundary
+
+The system stops at analytics, instructions, and manually entered records. It must not control bookmaker accounts or place bets.

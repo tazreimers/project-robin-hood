@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 @celery_app.task(name="app.jobs.scan_now.scan_now")
 def scan_now(scan_run_id: int) -> dict[str, object]:
+    """Run the full scan workflow in Celery for an already-created ScanRun."""
     db = SessionLocal()
     service = ScannerService(db)
 

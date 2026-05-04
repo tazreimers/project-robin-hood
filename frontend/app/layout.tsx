@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import AppShell from "../components/AppShell";
+import AppShell from "../components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "Project Robin Hood",

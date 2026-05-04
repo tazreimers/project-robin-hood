@@ -3,14 +3,12 @@
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
-  Alert,
   Box,
   Button,
   Chip,
   FormControlLabel,
   LinearProgress,
   Paper,
-  Skeleton,
   Snackbar,
   Stack,
   Switch,
@@ -29,6 +27,10 @@ import {
   getOpportunityInstructions,
 } from "../../lib/api";
 import type { ActiveArbitrageOpportunity } from "../../types/api";
+import EmptyState from "../../components/common/EmptyState";
+import ErrorState from "../../components/common/ErrorState";
+import LoadingState from "../../components/common/LoadingState";
+import InfoTooltip from "../../components/help/InfoTooltip";
 
 const refreshSeconds = 30;
 
@@ -105,13 +107,19 @@ export default function OpportunitiesPage() {
     try {
       const instructions = await getOpportunityInstructions(String(opportunityId));
       const text = [
-        `${instructions.event.home_team} vs ${instructions.event.away_team}`,
+        `Event: ${instructions.event.home_team} vs ${instructions.event.away_team}`,
         `Market: ${instructions.market}`,
         `Margin: ${formatPercent(instructions.margin)}`,
-        ...instructions.legs.map(
-          (leg) =>
-            `${leg.bookmaker.name}: ${leg.outcome_name} @ ${leg.decimal_odds}, stake ${formatMoney(leg.stake)}`,
-        ),
+        "",
+        ...instructions.legs.flatMap((leg, index) => [
+          `Leg ${index + 1}`,
+          `Bookmaker: ${leg.bookmaker.name}`,
+          `Outcome: ${leg.outcome_name}`,
+          `Odds: ${leg.decimal_odds}`,
+          `Stake: ${formatMoney(leg.stake)}`,
+          `Expected return: ${formatMoney(leg.expected_return)}`,
+          "",
+        ]),
       ].join("\n");
       await navigator.clipboard.writeText(text);
       setSnackbar("Bet instructions copied");
@@ -147,7 +155,12 @@ export default function OpportunitiesPage() {
       },
       {
         field: "margin",
-        headerName: "Margin",
+        renderHeader: () => (
+          <Stack direction="row" sx={{ alignItems: "center" }}>
+            Margin
+            <InfoTooltip title="Margin is the gap between 100% and the best-outcome implied probability total." />
+          </Stack>
+        ),
         width: 120,
         type: "number",
         valueGetter: (value) => Number(value),
@@ -173,7 +186,12 @@ export default function OpportunitiesPage() {
       },
       {
         field: "guaranteed_profit",
-        headerName: "Profit",
+        renderHeader: () => (
+          <Stack direction="row" sx={{ alignItems: "center" }}>
+            Profit
+            <InfoTooltip title="Guaranteed profit assumes every listed leg is placed at the quoted odds or better." />
+          </Stack>
+        ),
         width: 140,
         type: "number",
         valueGetter: (value) => Number(value),
@@ -185,7 +203,12 @@ export default function OpportunitiesPage() {
       },
       {
         field: "validation_status",
-        headerName: "Freshness",
+        renderHeader: () => (
+          <Stack direction="row" sx={{ alignItems: "center" }}>
+            Freshness
+            <InfoTooltip title="Fresh, risky, and stale statuses are based on latest odds age and validation checks." />
+          </Stack>
+        ),
         width: 140,
         renderCell: (params) => (
           <Tooltip title={validationTooltip(params.row)} arrow>
@@ -253,10 +276,7 @@ export default function OpportunitiesPage() {
           onIncludeStaleChange={setIncludeStale}
         />
         <Paper sx={{ p: 2 }}>
-          <Skeleton height={44} />
-          <Skeleton height={56} />
-          <Skeleton height={56} />
-          <Skeleton height={56} />
+          <LoadingState message="Loading opportunities..." />
         </Paper>
       </Stack>
     );
@@ -273,16 +293,7 @@ export default function OpportunitiesPage() {
       />
 
       {error ? (
-        <Alert
-          severity="error"
-          action={
-            <Button color="inherit" size="small" onClick={() => void loadOpportunities(true)}>
-              Retry
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
+        <ErrorState message={error} onRetry={() => void loadOpportunities(true)} />
       ) : null}
 
       <Paper sx={{ overflow: "hidden", border: 1, borderColor: "divider" }}>
@@ -301,6 +312,14 @@ export default function OpportunitiesPage() {
           getRowClassName={(params: GridRowClassNameParams<ActiveArbitrageOpportunity>) =>
             updatedIds.has(Number(params.id)) ? "updated-row" : ""
           }
+          slots={{
+            noRowsOverlay: () => (
+              <EmptyState
+                title="No opportunities found yet"
+                message="Run a scan to check the latest odds, or seed demo data for a local walkthrough."
+              />
+            ),
+          }}
           localeText={{ noRowsLabel: "No arbitrage opportunities found" }}
           sx={{
             border: 0,

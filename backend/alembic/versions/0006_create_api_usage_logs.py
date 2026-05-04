@@ -1,7 +1,7 @@
 """create api usage logs
 
-Revision ID: 0006_create_api_usage_logs
-Revises: 0005_create_action_tracking
+Revision ID: 0006_api_usage_logs
+Revises: 0005_action_tracking
 Create Date: 2026-05-04 00:00:00.000000
 """
 
@@ -10,8 +10,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "0006_create_api_usage_logs"
-down_revision: Union[str, None] = "0005_create_action_tracking"
+revision: str = "0006_api_usage_logs"
+down_revision: Union[str, None] = "0005_action_tracking"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

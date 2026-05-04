@@ -22,6 +22,10 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import ErrorState from "../components/common/ErrorState";
+import MetricCard from "../components/common/MetricCard";
+import InfoTooltip from "../components/help/InfoTooltip";
+import PageHeader from "../components/layout/PageHeader";
 import {
   formatMoney,
   formatPercent,
@@ -144,31 +148,21 @@ export default function DashboardPage() {
     .map((priority) => priority.next_scan_at)
     .filter((value): value is string => Boolean(value))
     .sort()[0] ?? null;
+  const demoDataDetected = Boolean(apiUsage?.usage_logs.some((log) => log.endpoint === "demo_seed"));
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h5">
-          Dashboard
-        </Typography>
-        <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-          Current API status, latest scan results, and scanner controls.
-        </Typography>
-      </Box>
+      <PageHeader title="Dashboard" description="Current API status, latest scan results, and scanner controls." />
 
       {error ? (
-        <Alert
-          severity="error"
-          action={
-            <Button color="inherit" size="small" onClick={() => void loadDashboard()}>
-              Retry
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
+        <ErrorState message={error} onRetry={() => void loadDashboard()} />
       ) : null}
       {scanError ? <Alert severity="error">{scanError}</Alert> : null}
+      {demoDataDetected ? (
+        <Alert severity="info">
+          Demo data is loaded. Live odds will only appear after configuring `ODDS_API_KEY` and running a scan.
+        </Alert>
+      ) : null}
       {quotaIsLow ? (
         <Alert severity="warning">
           API quota is low. New scans may be blocked to preserve the configured quota buffer.
@@ -205,6 +199,7 @@ export default function DashboardPage() {
                 <Box>
                   <Typography color="text.secondary" variant="body2">
                     Scanner
+                    <InfoTooltip title="Run Scan queues the full odds fetch and arbitrage detection workflow if quota guard checks pass." />
                   </Typography>
                   <Typography variant="h5" sx={{ mt: 1 }}>
                     {scanRunning ? "Scan running" : latestScan?.status ?? "Ready"}
@@ -229,6 +224,7 @@ export default function DashboardPage() {
             <CardContent>
               <Typography color="text.secondary" variant="body2">
                 API quota
+                <InfoTooltip title="Quota is captured from provider response headers and protects the app from burning API credits too quickly." />
               </Typography>
               <Grid container spacing={2} sx={{ mt: 0.25 }}>
                 <Grid size={{ xs: 6, md: 3 }}>
@@ -279,45 +275,45 @@ export default function DashboardPage() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard label="Events processed" value={latestScan?.events_processed ?? 0} loading={loading} />
+          <MetricCard label="Events processed" value={latestScan?.events_processed ?? 0} loading={loading} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Total opportunities"
             value={metrics?.total_opportunities_found ?? 0}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Last scan time"
             value={formatDateTime(latestScan?.completed_at ?? latestScan?.started_at ?? null)}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Actioned"
             value={metrics?.opportunities_actioned ?? 0}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Expired before action"
             value={metrics?.expired_before_action ?? 0}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Recommended profit"
             value={formatMoney(metrics?.total_recommended_profit ?? 0)}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Expected profit"
             value={formatMoney(metrics?.expected_profit ?? 0)}
             loading={loading}
@@ -325,7 +321,7 @@ export default function DashboardPage() {
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Actual profit"
             value={formatMoney(metrics?.actual_profit ?? 0)}
             loading={loading}
@@ -333,7 +329,7 @@ export default function DashboardPage() {
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Settled profit/loss"
             value={formatMoney(metrics?.actual_profit_loss ?? 0)}
             loading={loading}
@@ -341,7 +337,7 @@ export default function DashboardPage() {
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Odds changed before action"
             value={metrics?.odds_changed_before_action ?? 0}
             loading={loading}
@@ -349,21 +345,21 @@ export default function DashboardPage() {
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Skipped"
             value={metrics?.skipped_opportunities ?? 0}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Average margin"
             value={metrics?.average_margin ? formatPercent(metrics.average_margin) : "N/A"}
             loading={loading}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SummaryCard
+          <MetricCard
             label="Average odds age"
             value={metrics?.average_odds_age ? `${Number(metrics.average_odds_age).toFixed(1)}s` : "N/A"}
             loading={loading}
@@ -486,30 +482,5 @@ function QuotaMetric({
         {loading ? <CircularProgress size={22} /> : value ?? "N/A"}
       </Typography>
     </Box>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  loading,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  loading: boolean;
-  tone?: string;
-}) {
-  return (
-    <Card sx={{ height: "100%", "&:hover": { boxShadow: 4, transform: "translateY(-1px)" } }}>
-      <CardContent>
-        <Typography color="text.secondary" variant="body2">
-          {label}
-        </Typography>
-        <Typography variant="h4" sx={{ mt: 1, fontWeight: 700, color: tone }}>
-          {loading ? <CircularProgress size={26} /> : value}
-        </Typography>
-      </CardContent>
-    </Card>
   );
 }

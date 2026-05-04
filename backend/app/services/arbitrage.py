@@ -73,6 +73,7 @@ class ArbitrageDetectionSummary:
 
 
 def find_arbitrage(outcomes_by_bookmaker: Mapping[str, Mapping[str, Decimal]]) -> ArbitrageCandidateResult | None:
+    """Return the best cross-bookmaker arbitrage for a two- or three-way market."""
     best_by_outcome: dict[str, ArbitrageCandidateLeg] = {}
 
     for bookmaker, outcomes in outcomes_by_bookmaker.items():
@@ -92,6 +93,7 @@ def find_arbitrage(outcomes_by_bookmaker: Mapping[str, Mapping[str, Decimal]]) -
     if len(best_by_outcome) not in SUPPORTED_OUTCOME_COUNTS:
         return None
 
+    # Arbitrage exists when the best available odds imply less than a 100% total probability.
     implied_probability_total = sum((leg.implied_probability for leg in best_by_outcome.values()), Decimal("0"))
     if implied_probability_total >= Decimal("1"):
         return None
@@ -113,6 +115,7 @@ class ArbitrageDetectionService:
         self.max_odds_age_seconds = self.settings.max_odds_age_seconds
 
     def detect(self, now: datetime | None = None) -> ArbitrageDetectionSummary:
+        """Detect quality-approved arbitrage opportunities from recent odds snapshots."""
         detected_at = ensure_aware(now or datetime.now(timezone.utc))
         cutoff = detected_at - timedelta(seconds=self.max_odds_age_seconds)
         summary = ArbitrageDetectionSummary()
@@ -216,6 +219,8 @@ class ArbitrageDetectionService:
             return None
 
         best_snapshots = sorted(best_by_outcome.values(), key=lambda snapshot: snapshot.outcome_name)
+        # Sum 1 / decimal_odds across the best price for each outcome.
+        # A total below one leaves margin for a guaranteed return if all legs are placeable.
         implied_probability_total = sum(
             (snapshot.implied_probability for snapshot in best_snapshots),
             Decimal("0"),
@@ -299,6 +304,9 @@ def allocate_stakes(
     total_stake: Decimal,
     implied_probability_total: Decimal,
 ) -> list[StakeAllocation]:
+    """Allocate stake so each winning outcome returns approximately the same amount."""
+    # Stakes are proportional to each leg's implied probability. The rounding delta is assigned to the
+    # largest raw stake so the final recommendation still matches the configured total stake exactly.
     raw_stakes = [
         total_stake * (leg.implied_probability / implied_probability_total)
         for leg in legs

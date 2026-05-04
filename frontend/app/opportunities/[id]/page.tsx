@@ -14,7 +14,6 @@ import {
   Chip,
   Divider,
   Grid,
-  Skeleton,
   Snackbar,
   Stack,
   TextField,
@@ -24,6 +23,9 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
+import ErrorState from "../../../components/common/ErrorState";
+import LoadingState from "../../../components/common/LoadingState";
+import InfoTooltip from "../../../components/help/InfoTooltip";
 import {
   createOpportunityExecution,
   createOpportunityAction,
@@ -189,34 +191,11 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   }, [loadInstructions]);
 
   if (loading) {
-    return (
-      <Stack spacing={3}>
-        <Skeleton height={180} variant="rounded" />
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Skeleton height={300} variant="rounded" />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Skeleton height={300} variant="rounded" />
-          </Grid>
-        </Grid>
-      </Stack>
-    );
+    return <LoadingState message="Loading opportunity instructions..." />;
   }
 
   if (error || !instructions) {
-    return (
-      <Alert
-        severity="error"
-        action={
-          <Button color="inherit" size="small" onClick={() => void loadInstructions()}>
-            Retry
-          </Button>
-        }
-      >
-        {error ?? "Opportunity was not found"}
-      </Alert>
-    );
+    return <ErrorState message={error ?? "Opportunity was not found"} onRetry={() => void loadInstructions()} />;
   }
 
   const checklistComplete = checklistItems.every((item) => checked[item]);
@@ -387,6 +366,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           >
             <Box>
               <Typography variant="h6">Execution checklist</Typography>
+              <InfoTooltip title="Record what you actually saw and did manually. This does not place bets or control bookmaker accounts." />
               <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
                 Complete each manual check before marking the opportunity as actioned.
               </Typography>
