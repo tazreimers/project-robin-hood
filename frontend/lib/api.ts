@@ -4,6 +4,7 @@ import type {
   BetRecord,
   BetRecordPayload,
   DashboardMetrics,
+  EventScanPriority,
   HealthResponse,
   OpportunityAction,
   OpportunityInstructions,
@@ -21,6 +22,7 @@ export type {
   BookmakerRead,
   DashboardMetrics,
   EventRead,
+  EventScanPriority,
   HealthResponse,
   OpportunityAction,
   OpportunityInstructionLeg,
@@ -28,6 +30,7 @@ export type {
   OpportunityValidationReasons,
   RecentActivity,
   ScanRun,
+  ScanPriorityEvent,
   ValidationStatus,
 } from "../types/api";
 
@@ -64,6 +67,14 @@ export function getDashboardMetrics() {
 
 export function getApiUsage() {
   return fetchJson<ApiUsage>("/api-usage");
+}
+
+export function getScanPriorities() {
+  return fetchJson<EventScanPriority[]>("/scan-priorities");
+}
+
+export function startAdaptiveScan() {
+  return fetchJson<{ status: string; task_id: string }>("/jobs/adaptive-scan", { method: "POST" });
 }
 
 export function getActiveOpportunities(includeStale = false) {

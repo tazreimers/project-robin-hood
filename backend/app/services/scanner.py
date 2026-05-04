@@ -11,6 +11,7 @@ from app.services.arbitrage import ArbitrageDetectionService
 from app.services.odds_ingestion import OddsIngestionService
 from app.providers import OddsProvider
 from app.services.quota_guard import QuotaGuard
+from app.services.scan_scheduler import ScanScheduler
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,7 @@ class ScannerService:
             quota_guard=quota_guard,
         ).ingest_configured_sports(sport_keys)
         detection = ArbitrageDetectionService(self.db, settings=self.settings).detect()
+        ScanScheduler(self.db, settings=self.settings).refresh_priorities()
         completed_at = datetime.now(timezone.utc)
 
         scan_run.status = "completed"

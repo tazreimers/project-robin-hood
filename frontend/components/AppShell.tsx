@@ -6,6 +6,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import HistoryIcon from "@mui/icons-material/History";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PendingActionsIcon from "@mui/icons-material/PendingActions";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import {
@@ -47,6 +48,7 @@ const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeo
 const navItems = [
   { label: "Dashboard", href: "/", icon: <DashboardIcon /> },
   { label: "Opportunities", href: "/opportunities", icon: <TrendingUpIcon /> },
+  { label: "Scan Priorities", href: "/scan-priorities", icon: <PendingActionsIcon /> },
   { label: "Scan Runs", href: "/scan-runs", icon: <HistoryIcon /> },
 ];
 

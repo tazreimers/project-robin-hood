@@ -30,8 +30,9 @@ class QuotaGuard:
         self,
         now: datetime | None = None,
         exclude_scan_run_id: int | None = None,
+        sport_keys: list[str] | None = None,
     ) -> QuotaGuardDecision:
-        estimated_cost = self.estimate_scan_cost()
+        estimated_cost = self.estimate_scan_cost(sport_keys=sport_keys)
         if not self.settings.enable_quota_guard:
             return QuotaGuardDecision(allowed=True, estimated_cost=estimated_cost)
 

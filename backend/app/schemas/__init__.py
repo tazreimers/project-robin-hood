@@ -24,6 +24,7 @@ from app.schemas.odds import (
     TeamAliasCreate,
     TeamAliasRead,
 )
+from app.schemas.scan_priority import EventScanPriorityRead, ScanPriorityEventRead
 from app.schemas.scanner import ScanRunRead
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
     "BookmakerPairMetricRead",
     "DashboardMetricsRead",
     "EventRead",
+    "EventScanPriorityRead",
     "HealthResponse",
     "MarketAliasCreate",
     "MarketAliasRead",
@@ -51,6 +53,7 @@ __all__ = [
     "OpportunityActionRead",
     "OutcomeRead",
     "ScanRunRead",
+    "ScanPriorityEventRead",
     "SportRead",
     "TeamAliasCreate",
     "TeamAliasRead",

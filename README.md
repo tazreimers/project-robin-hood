@@ -89,6 +89,11 @@ DAILY_QUOTA_BUDGET=500
 MIN_REQUESTS_REMAINING_BUFFER=20
 MAX_SCANS_PER_HOUR=12
 ENABLE_QUOTA_GUARD=true
+LOW_PRIORITY_SCAN_MINUTES=30
+NORMAL_PRIORITY_SCAN_MINUTES=5
+HIGH_PRIORITY_SCAN_SECONDS=60
+URGENT_PRIORITY_SCAN_SECONDS=30
+NEAR_ARB_THRESHOLD=0.03
 ```
 
 `ODDS_API_KEY` is optional for bootstrapping. Odds ingestion returns a skipped result when it is not configured.
@@ -180,6 +185,7 @@ POST /scan
 GET /scan-runs
 GET /scan-runs/{id}
 GET /api-usage
+GET /scan-priorities
 GET /opportunities
 GET /opportunities/active
 GET /opportunities/active?include_stale=true
@@ -190,6 +196,7 @@ POST /opportunities/{id}/actions
 POST /opportunities/{id}/bet-records
 PATCH /bet-records/{id}
 POST /jobs/fetch-odds
+POST /jobs/adaptive-scan
 POST /jobs/detect-arbitrage
 GET /jobs/{task_id}
 ```

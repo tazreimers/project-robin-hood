@@ -5,6 +5,7 @@ from app.db.session import SessionLocal
 from app.jobs.celery_app import celery_app
 from app.services.odds_ingestion import OddsIngestionService
 from app.services.quota_guard import QuotaGuard
+from app.services.scan_scheduler import ScanScheduler
 from app.providers import OddsProviderConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ def fetch_odds() -> dict[str, object]:
 
         service = OddsIngestionService(db, quota_guard=quota_guard)
         summary = service.ingest_configured_sports(sport_keys)
+        ScanScheduler(db, settings=settings).refresh_priorities()
         db.commit()
     except OddsProviderConfigurationError as exc:
         db.rollback()

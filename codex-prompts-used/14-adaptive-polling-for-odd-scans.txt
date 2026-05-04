@@ -1,0 +1,88 @@
+Implement adaptive polling for odds scans.
+
+Read AGENTS.md first.
+
+Goal:
+Scan important events more often and low-value events less often.
+
+Backend tasks:
+
+1. Add model: EventScanPriority
+Fields:
+- id
+- event_id
+- sport_key
+- priority_level
+- next_scan_at
+- last_scan_at
+- reason
+- created_at
+- updated_at
+
+Priority levels:
+- LOW
+- NORMAL
+- HIGH
+- URGENT
+
+2. Create service:
+backend/app/services/scan_scheduler.py
+
+It should assign priority based on:
+- time until event start
+- whether recent odds were close to arbitrage
+- whether an arbitrage was recently detected
+- whether odds moved significantly
+- sport importance/config
+
+Rules:
+- events more than 24 hours away: LOW
+- events 2–24 hours away: NORMAL
+- events under 2 hours away: HIGH
+- events with recent near-arb: URGENT
+- events already expired: do not scan
+
+3. Add config:
+- LOW_PRIORITY_SCAN_MINUTES=30
+- NORMAL_PRIORITY_SCAN_MINUTES=5
+- HIGH_PRIORITY_SCAN_SECONDS=60
+- URGENT_PRIORITY_SCAN_SECONDS=30
+- NEAR_ARB_THRESHOLD=0.03
+
+4. Add Celery job:
+backend/app/jobs/adaptive_scan.py
+
+It should:
+- find events due for scanning
+- respect quota guard
+- scan only required sports/markets
+- update next_scan_at
+- run arbitrage detection after ingestion
+
+5. Add endpoint:
+POST /jobs/adaptive-scan
+
+6. Add endpoint:
+GET /scan-priorities
+
+Frontend:
+Add page:
+frontend/app/scan-priorities/page.tsx
+
+Show:
+- event
+- start time
+- priority
+- next scan time
+- reason
+
+Add dashboard card:
+- urgent events
+- high priority events
+- next scheduled scan
+
+Tests:
+- priority assignment by event start time
+- near-arb makes event urgent
+- expired events not scanned
+- quota guard blocks adaptive scan

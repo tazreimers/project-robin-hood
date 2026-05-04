@@ -67,6 +67,26 @@ export type ApiUsage = {
   usage_logs: ApiUsageLog[];
 };
 
+export type ScanPriorityEvent = {
+  id: number;
+  home_team: string;
+  away_team: string;
+  start_time: string;
+};
+
+export type EventScanPriority = {
+  id: number;
+  event_id: number;
+  sport_key: string;
+  priority_level: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  next_scan_at: string | null;
+  last_scan_at: string | null;
+  reason: string;
+  created_at: string;
+  updated_at: string;
+  event: ScanPriorityEvent;
+};
+
 export type EventRead = {
   id: number;
   home_team: string;

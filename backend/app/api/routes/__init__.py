@@ -16,6 +16,7 @@ from app.core.constants import (
 )
 from app.core.logging import redact_secrets
 from app.jobs.celery_app import celery_app
+from app.jobs.adaptive_scan import adaptive_scan as adaptive_scan_job
 from app.jobs.detect_arbitrage import detect_arbitrage as detect_arbitrage_job
 from app.jobs.fetch_odds import fetch_odds as fetch_odds_job
 from app.jobs.scan_now import scan_now as scan_now_job
@@ -25,6 +26,7 @@ from app.models import (
     BetRecord,
     Bookmaker,
     Event,
+    EventScanPriority,
     MarketAlias,
     OddsSnapshot,
     OpportunityAction,
@@ -54,6 +56,7 @@ from app.schemas.odds import (
     TeamAliasCreate,
     TeamAliasRead,
 )
+from app.schemas.scan_priority import EventScanPriorityRead
 from app.schemas.dashboard import BookmakerPairMetricRead, DashboardMetricsRead, RecentActivityRead
 from app.schemas.scanner import ScanRunRead
 from app.services.health import get_health
@@ -68,6 +71,7 @@ from app.services.opportunity_validator import (
 )
 from app.services.scanner import ScannerService
 from app.services.quota_guard import QuotaGuard
+from app.services.scan_scheduler import ScanScheduler
 
 router = APIRouter()
 
@@ -119,6 +123,14 @@ def get_scan_run(scan_run_id: int, db: Session = Depends(get_db)) -> ScanRun:
 @router.get("/api-usage", response_model=ApiUsageRead)
 def get_api_usage(db: Session = Depends(get_db)) -> dict[str, object]:
     return QuotaGuard(db).build_usage_report()
+
+
+@router.get("/scan-priorities", response_model=list[EventScanPriorityRead])
+def list_scan_priorities(db: Session = Depends(get_db)) -> list[EventScanPriority]:
+    scheduler = ScanScheduler(db)
+    scheduler.refresh_priorities()
+    db.commit()
+    return scheduler.list_priorities()
 
 
 @router.get("/bookmakers", response_model=list[BookmakerRead])
@@ -357,6 +369,12 @@ def update_bet_record(
 @router.post("/jobs/fetch-odds", status_code=202)
 def enqueue_fetch_odds() -> dict[str, str]:
     task = fetch_odds_job.delay()
+    return {"status": "queued", "task_id": task.id}
+
+
+@router.post("/jobs/adaptive-scan", status_code=202)
+def enqueue_adaptive_scan() -> dict[str, str]:
+    task = adaptive_scan_job.delay()
     return {"status": "queued", "task_id": task.id}
 
 

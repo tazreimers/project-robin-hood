@@ -12,7 +12,9 @@ Base URL in local development: `http://localhost:8000`.
 - `GET /scan-runs`: Lists scan runs newest first.
 - `GET /scan-runs/{scan_run_id}`: Returns one scan run.
 - `GET /api-usage`: Returns latest remaining quota, used quota, last request cost, estimated scans remaining, and recent usage logs.
+- `GET /scan-priorities`: Lists adaptive event scan priorities with event, start time, priority, next scan time, and reason.
 - `POST /jobs/fetch-odds`: Queues odds fetching.
+- `POST /jobs/adaptive-scan`: Queues the adaptive scan workflow for events whose priority schedule is due.
 - `POST /jobs/detect-arbitrage`: Queues arbitrage detection.
 - `GET /jobs/{task_id}`: Returns Celery job state and result/error details.
 

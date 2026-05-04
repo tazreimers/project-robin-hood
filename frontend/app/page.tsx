@@ -29,11 +29,12 @@ import {
   getApiUsage,
   getDashboardMetrics,
   getHealth,
+  getScanPriorities,
   getScanRun,
   getScanRuns,
   startScan,
 } from "../lib/api";
-import type { ApiUsage, DashboardMetrics, HealthResponse, ScanRun } from "../types/api";
+import type { ApiUsage, DashboardMetrics, EventScanPriority, HealthResponse, ScanRun } from "../types/api";
 
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   const [latestScan, setLatestScan] = useState<ScanRun | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [apiUsage, setApiUsage] = useState<ApiUsage | null>(null);
+  const [scanPriorities, setScanPriorities] = useState<EventScanPriority[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -53,16 +55,18 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const [healthResponse, scanRuns, metricsResponse, apiUsageResponse] = await Promise.all([
+      const [healthResponse, scanRuns, metricsResponse, apiUsageResponse, scanPriorityResponse] = await Promise.all([
         getHealth(),
         getScanRuns(),
         getDashboardMetrics(),
         getApiUsage(),
+        getScanPriorities(),
       ]);
       setHealth(healthResponse);
       setLatestScan(scanRuns[0] ?? null);
       setMetrics(metricsResponse);
       setApiUsage(apiUsageResponse);
+      setScanPriorities(scanPriorityResponse);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard");
     } finally {
@@ -134,6 +138,12 @@ export default function DashboardPage() {
 
   const estimatedScansRemaining = apiUsage?.estimated_scans_remaining ?? null;
   const quotaIsLow = estimatedScansRemaining !== null && estimatedScansRemaining <= 1;
+  const urgentEvents = scanPriorities.filter((priority) => priority.priority_level === "URGENT").length;
+  const highPriorityEvents = scanPriorities.filter((priority) => priority.priority_level === "HIGH").length;
+  const nextScheduledScan = scanPriorities
+    .map((priority) => priority.next_scan_at)
+    .filter((value): value is string => Boolean(value))
+    .sort()[0] ?? null;
 
   return (
     <Stack spacing={3}>
@@ -236,6 +246,31 @@ export default function DashboardPage() {
                     value={apiUsage?.estimated_scans_remaining}
                     loading={loading}
                     tone={quotaIsLow ? "warning.main" : undefined}
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Card>
+            <CardContent>
+              <Typography color="text.secondary" variant="body2">
+                Adaptive scanning
+              </Typography>
+              <Grid container spacing={2} sx={{ mt: 0.25 }}>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <QuotaMetric label="Urgent events" value={urgentEvents} loading={loading} />
+                </Grid>
+                <Grid size={{ xs: 6, md: 4 }}>
+                  <QuotaMetric label="High priority" value={highPriorityEvents} loading={loading} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <QuotaMetric
+                    label="Next scheduled scan"
+                    value={nextScheduledScan ? formatDateTime(nextScheduledScan) : "Not scheduled"}
+                    loading={loading}
                   />
                 </Grid>
               </Grid>
@@ -407,7 +442,7 @@ function QuotaMetric({
   tone,
 }: {
   label: string;
-  value: number | null | undefined;
+  value: number | string | null | undefined;
   loading: boolean;
   tone?: string;
 }) {

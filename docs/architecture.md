@@ -35,8 +35,17 @@ Docker Compose wires these services together for local development.
 5. Provider responses log quota headers to `api_usage_logs`.
 6. Odds ingestion normalizes teams, events, and markets before persisting sports, events, bookmakers, markets, outcomes, and snapshots.
 7. Arbitrage detection evaluates recent odds snapshots and creates opportunity rows and legs.
-8. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
-9. The frontend reads active opportunities and displays manual execution instructions.
+8. Adaptive scan priorities are refreshed for upcoming events based on event start time, near-arb signals, recent arbitrage, and odds movement.
+9. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
+10. The frontend reads active opportunities and displays manual execution instructions.
+
+## Adaptive Scan Flow
+
+1. `POST /jobs/adaptive-scan` queues the adaptive scan task.
+2. The scheduler refreshes `event_scan_priorities` and selects due upcoming events.
+3. The quota guard checks the estimated cost for the due sport keys only.
+4. The worker fetches odds for those due sports, runs arbitrage detection, and schedules each due event's next scan based on its priority.
+5. Expired events are left unscheduled.
 
 ## Manual Tracking Flow
 

@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     min_requests_remaining_buffer: int = 20
     max_scans_per_hour: int = 12
     enable_quota_guard: bool = True
+    low_priority_scan_minutes: int = 30
+    normal_priority_scan_minutes: int = 5
+    high_priority_scan_seconds: int = 60
+    urgent_priority_scan_seconds: int = 30
+    near_arb_threshold: Decimal = Decimal("0.03")
     cors_origins: list[str] = ["http://localhost:3000"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

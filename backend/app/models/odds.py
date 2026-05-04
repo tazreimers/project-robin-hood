@@ -85,6 +85,11 @@ class Event(TimestampMixin, Base):
         back_populates="event",
         cascade="all, delete-orphan",
     )
+    scan_priority: Mapped[EventScanPriority | None] = relationship(
+        back_populates="event",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 
 class Market(TimestampMixin, Base):
@@ -156,6 +161,21 @@ class ApiUsageLog(Base):
     requests_last: Mapped[int | None] = mapped_column(nullable=True)
     estimated_cost: Mapped[int] = mapped_column(default=0, server_default="0")
     captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class EventScanPriority(TimestampMixin, Base):
+    __tablename__ = "event_scan_priorities"
+    __table_args__ = (UniqueConstraint("event_id", name="uq_event_scan_priorities_event_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    sport_key: Mapped[str] = mapped_column(String(64), index=True)
+    priority_level: Mapped[str] = mapped_column(String(16), index=True)
+    next_scan_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    last_scan_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reason: Mapped[str] = mapped_column(String(1000))
+
+    event: Mapped[Event] = relationship(back_populates="scan_priority")
 
 
 class ArbitrageOpportunity(Base):
