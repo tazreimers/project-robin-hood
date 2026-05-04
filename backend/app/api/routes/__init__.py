@@ -32,6 +32,7 @@ from app.models import (
     Sport,
     TeamAlias,
 )
+from app.schemas.api_usage import ApiUsageRead
 from app.schemas.health import HealthResponse
 from app.schemas.jobs import JobStatusRead
 from app.schemas.odds import (
@@ -66,6 +67,7 @@ from app.services.opportunity_validator import (
     ensure_aware,
 )
 from app.services.scanner import ScannerService
+from app.services.quota_guard import QuotaGuard
 
 router = APIRouter()
 
@@ -87,6 +89,13 @@ def health_check() -> HealthResponse:
 @router.post("/scan", response_model=ScanRunRead, status_code=202)
 def run_scan_now(db: Session = Depends(get_db)) -> ScanRun:
     scanner = ScannerService(db)
+    quota_decision = QuotaGuard(db).check_scan_allowed()
+    if not quota_decision.allowed:
+        scan_run = scanner.create_blocked_scan_run(quota_decision.reason or "Scan blocked by quota guard")
+        db.commit()
+        db.refresh(scan_run)
+        return scan_run
+
     scan_run = scanner.create_scan_run()
     db.commit()
     db.refresh(scan_run)
@@ -105,6 +114,11 @@ def get_scan_run(scan_run_id: int, db: Session = Depends(get_db)) -> ScanRun:
     if scan_run is None:
         raise HTTPException(status_code=404, detail="Scan run not found")
     return scan_run
+
+
+@router.get("/api-usage", response_model=ApiUsageRead)
+def get_api_usage(db: Session = Depends(get_db)) -> dict[str, object]:
+    return QuotaGuard(db).build_usage_report()
 
 
 @router.get("/bookmakers", response_model=list[BookmakerRead])

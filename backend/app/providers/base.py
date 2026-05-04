@@ -15,6 +15,20 @@ class OddsProviderConfigurationError(OddsProviderError):
 
 
 @dataclass(frozen=True)
+class ProviderApiUsage:
+    provider: str
+    endpoint: str
+    sport_key: str | None
+    regions: str
+    markets: str
+    requests_remaining: int | None
+    requests_used: int | None
+    requests_last: int | None
+    estimated_cost: int
+    captured_at: datetime
+
+
+@dataclass(frozen=True)
 class ProviderSport:
     key: str
     name: str

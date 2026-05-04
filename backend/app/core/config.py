@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     default_total_stake: Decimal = Decimal("1000")
     min_arbitrage_margin: Decimal = Decimal("0.01")
     max_odds_age_seconds: int = 60
+    daily_quota_budget: int = 500
+    min_requests_remaining_buffer: int = 20
+    max_scans_per_hour: int = 12
+    enable_quota_guard: bool = True
     cors_origins: list[str] = ["http://localhost:3000"]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

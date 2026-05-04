@@ -45,6 +45,28 @@ export type DashboardMetrics = {
   recent_activity: RecentActivity[];
 };
 
+export type ApiUsageLog = {
+  id: number;
+  provider: string;
+  endpoint: string;
+  sport_key: string | null;
+  regions: string;
+  markets: string;
+  requests_remaining: number | null;
+  requests_used: number | null;
+  requests_last: number | null;
+  estimated_cost: number;
+  captured_at: string;
+};
+
+export type ApiUsage = {
+  latest_remaining_quota: number | null;
+  used_quota: number | null;
+  last_request_cost: number | null;
+  estimated_scans_remaining: number | null;
+  usage_logs: ApiUsageLog[];
+};
+
 export type EventRead = {
   id: number;
   home_team: string;

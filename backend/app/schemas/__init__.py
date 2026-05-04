@@ -1,3 +1,4 @@
+from app.schemas.api_usage import ApiUsageLogRead, ApiUsageRead
 from app.schemas.dashboard import BookmakerPairMetricRead, DashboardMetricsRead, RecentActivityRead
 from app.schemas.health import HealthResponse
 from app.schemas.odds import (
@@ -28,6 +29,8 @@ from app.schemas.scanner import ScanRunRead
 __all__ = [
     "ActiveArbitrageLegRead",
     "ActiveArbitrageOpportunityRead",
+    "ApiUsageLogRead",
+    "ApiUsageRead",
     "ArbitrageLegRead",
     "ArbitrageOpportunityRead",
     "BetRecordCreate",

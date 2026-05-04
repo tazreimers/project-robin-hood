@@ -1,0 +1,74 @@
+Implement a quota-aware scanning system.
+
+Read AGENTS.md first and preserve the existing architecture.
+
+Goal:
+Prevent the app from burning API credits too quickly.
+
+Backend tasks:
+
+1. Add model: ApiUsageLog
+Fields:
+- id
+- provider
+- endpoint
+- sport_key
+- regions
+- markets
+- requests_remaining
+- requests_used
+- requests_last
+- estimated_cost
+- captured_at
+
+2. Update The Odds API provider to capture response headers:
+- x-requests-remaining
+- x-requests-used
+- x-requests-last
+
+3. Add config variables:
+- DAILY_QUOTA_BUDGET
+- MIN_REQUESTS_REMAINING_BUFFER
+- MAX_SCANS_PER_HOUR
+- ENABLE_QUOTA_GUARD=true
+
+4. Create service:
+backend/app/services/quota_guard.py
+
+It should:
+- estimate scan cost before making API calls
+- block scans if quota is too low
+- block scans if scan frequency is too high
+- return clear reason when blocked
+- log quota usage after each API response
+
+5. Update POST /scan:
+- check quota guard before running
+- return blocked status if quota is insufficient
+
+6. Add endpoint:
+GET /api-usage
+
+Return:
+- latest remaining quota
+- used quota
+- last request cost
+- estimated scans remaining
+- usage logs
+
+7. Frontend:
+Add dashboard card:
+- API quota remaining
+- API quota used
+- last request cost
+- estimated scans remaining
+
+Add warning banner when quota is low.
+
+8. Tests:
+- scan allowed when quota healthy
+- scan blocked when quota below buffer
+- usage headers are saved
+- estimated cost works for markets x regions
+
+Do not change arbitrage detection logic.

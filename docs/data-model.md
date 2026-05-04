@@ -29,6 +29,7 @@ This document summarizes the current SQLAlchemy models and database tables.
 ## Operational Tables
 
 - `scan_runs`: Tracks background scan execution, counts processed by the scan, completion timestamp, and any error message.
+- `api_usage_logs`: Tracks provider API quota headers, estimated request cost, endpoint, sport key, regions, markets, and capture timestamp.
 
 ## Migrations
 

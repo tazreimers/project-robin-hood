@@ -142,6 +142,22 @@ class OddsSnapshot(Base):
     bookmaker: Mapped[Bookmaker] = relationship(back_populates="odds_snapshots")
 
 
+class ApiUsageLog(Base):
+    __tablename__ = "api_usage_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider: Mapped[str] = mapped_column(String(128), index=True)
+    endpoint: Mapped[str] = mapped_column(String(255))
+    sport_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    regions: Mapped[str] = mapped_column(String(128), default="", server_default="")
+    markets: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    requests_remaining: Mapped[int | None] = mapped_column(nullable=True)
+    requests_used: Mapped[int | None] = mapped_column(nullable=True)
+    requests_last: Mapped[int | None] = mapped_column(nullable=True)
+    estimated_cost: Mapped[int] = mapped_column(default=0, server_default="0")
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class ArbitrageOpportunity(Base):
     __tablename__ = "arbitrage_opportunities"
 

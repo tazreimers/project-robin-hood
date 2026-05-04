@@ -29,12 +29,14 @@ Docker Compose wires these services together for local development.
 ## Scan Flow
 
 1. A user clicks Run Scan in the frontend or calls `POST /scan`.
-2. The API creates a `scan_runs` row and queues `scan_now`.
-3. Celery fetches odds through provider adapters.
-4. Odds ingestion normalizes teams, events, and markets before persisting sports, events, bookmakers, markets, outcomes, and snapshots.
-5. Arbitrage detection evaluates recent odds snapshots and creates opportunity rows and legs.
-6. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
-7. The frontend reads active opportunities and displays manual execution instructions.
+2. The API checks the quota guard for estimated cost, remaining quota buffer, daily budget, and scan frequency.
+3. If allowed, the API creates a `scan_runs` row and queues `scan_now`; if blocked, the scan run is returned with `status: "blocked"`.
+4. Celery fetches odds through provider adapters.
+5. Provider responses log quota headers to `api_usage_logs`.
+6. Odds ingestion normalizes teams, events, and markets before persisting sports, events, bookmakers, markets, outcomes, and snapshots.
+7. Arbitrage detection evaluates recent odds snapshots and creates opportunity rows and legs.
+8. Opportunity validation scores freshness, event start risk, market consistency, event matching confidence, and leg availability.
+9. The frontend reads active opportunities and displays manual execution instructions.
 
 ## Manual Tracking Flow
 

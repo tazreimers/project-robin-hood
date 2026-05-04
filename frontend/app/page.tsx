@@ -26,13 +26,14 @@ import {
   formatMoney,
   formatPercent,
   formatDateTime,
+  getApiUsage,
   getDashboardMetrics,
   getHealth,
   getScanRun,
   getScanRuns,
   startScan,
 } from "../lib/api";
-import type { DashboardMetrics, HealthResponse, ScanRun } from "../types/api";
+import type { ApiUsage, DashboardMetrics, HealthResponse, ScanRun } from "../types/api";
 
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
@@ -40,6 +41,7 @@ export default function DashboardPage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [latestScan, setLatestScan] = useState<ScanRun | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [apiUsage, setApiUsage] = useState<ApiUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -51,14 +53,16 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const [healthResponse, scanRuns, metricsResponse] = await Promise.all([
+      const [healthResponse, scanRuns, metricsResponse, apiUsageResponse] = await Promise.all([
         getHealth(),
         getScanRuns(),
         getDashboardMetrics(),
+        getApiUsage(),
       ]);
       setHealth(healthResponse);
       setLatestScan(scanRuns[0] ?? null);
       setMetrics(metricsResponse);
+      setApiUsage(apiUsageResponse);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load dashboard");
     } finally {
@@ -93,13 +97,18 @@ export default function DashboardPage() {
     try {
       const run = await startScan();
       setLatestScan(run);
+      if (run.status === "blocked") {
+        setScanRunning(false);
+        setScanError(run.error_message ?? "Scan blocked by quota guard");
+        await loadDashboard();
+        return;
+      }
       await pollScanRun(run.scan_id);
-      setMetrics(await getDashboardMetrics());
     } catch (runError) {
       setScanError(runError instanceof Error ? runError.message : "Unable to start scan");
       setScanRunning(false);
     }
-  }, [pollScanRun]);
+  }, [loadDashboard, pollScanRun]);
 
   useEffect(() => {
     void loadDashboard();
@@ -122,6 +131,9 @@ export default function DashboardPage() {
 
     return <Chip label="Online" color="success" />;
   }, [error, health, loading]);
+
+  const estimatedScansRemaining = apiUsage?.estimated_scans_remaining ?? null;
+  const quotaIsLow = estimatedScansRemaining !== null && estimatedScansRemaining <= 1;
 
   return (
     <Stack spacing={3}>
@@ -147,6 +159,11 @@ export default function DashboardPage() {
         </Alert>
       ) : null}
       {scanError ? <Alert severity="error">{scanError}</Alert> : null}
+      {quotaIsLow ? (
+        <Alert severity="warning">
+          API quota is low. New scans may be blocked to preserve the configured quota buffer.
+        </Alert>
+      ) : null}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -193,6 +210,35 @@ export default function DashboardPage() {
                   Run Scan Now
                 </Button>
               </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12 }}>
+          <Card>
+            <CardContent>
+              <Typography color="text.secondary" variant="body2">
+                API quota
+              </Typography>
+              <Grid container spacing={2} sx={{ mt: 0.25 }}>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <QuotaMetric label="Remaining" value={apiUsage?.latest_remaining_quota} loading={loading} />
+                </Grid>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <QuotaMetric label="Used" value={apiUsage?.used_quota} loading={loading} />
+                </Grid>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <QuotaMetric label="Last cost" value={apiUsage?.last_request_cost} loading={loading} />
+                </Grid>
+                <Grid size={{ xs: 6, md: 3 }}>
+                  <QuotaMetric
+                    label="Scans remaining"
+                    value={apiUsage?.estimated_scans_remaining}
+                    loading={loading}
+                    tone={quotaIsLow ? "warning.main" : undefined}
+                  />
+                </Grid>
+              </Grid>
             </CardContent>
           </Card>
         </Grid>
@@ -351,6 +397,29 @@ export default function DashboardPage() {
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       />
     </Stack>
+  );
+}
+
+function QuotaMetric({
+  label,
+  value,
+  loading,
+  tone,
+}: {
+  label: string;
+  value: number | null | undefined;
+  loading: boolean;
+  tone?: string;
+}) {
+  return (
+    <Box>
+      <Typography color="text.secondary" variant="caption">
+        {label}
+      </Typography>
+      <Typography variant="h5" sx={{ mt: 0.5, fontWeight: 800, color: tone }}>
+        {loading ? <CircularProgress size={22} /> : value ?? "N/A"}
+      </Typography>
+    </Box>
   );
 }
 

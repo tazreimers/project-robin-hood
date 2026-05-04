@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -7,11 +8,13 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings, get_settings
+from app.core.constants import THE_ODDS_API_DEFAULT_MARKETS
 from app.core.logging import redact_secrets
 from app.providers.base import (
     OddsProvider,
     OddsProviderConfigurationError,
     OddsProviderError,
+    ProviderApiUsage,
     ProviderBookmaker,
     ProviderEvent,
     ProviderMarket,
@@ -29,12 +32,26 @@ class TheOddsApiProvider(OddsProvider):
     provider_name = "the_odds_api"
     base_url = "https://api.the-odds-api.com"
 
-    def __init__(self, settings: Settings | None = None, client: httpx.Client | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        client: httpx.Client | None = None,
+        usage_callback: Callable[[ProviderApiUsage], None] | None = None,
+    ) -> None:
         self.settings = settings or get_settings()
         self.client = client or httpx.Client(base_url=self.base_url, timeout=20.0)
+        self.usage_callback = usage_callback
 
     def fetch_sports(self) -> list[ProviderSport]:
-        payload = self._get("/v4/sports/", params={})
+        payload = self._get(
+            "/v4/sports/",
+            params={},
+            endpoint="/v4/sports/",
+            sport_key=None,
+            regions="",
+            markets="",
+            estimated_cost=0,
+        )
         if not isinstance(payload, list):
             raise OddsProviderError("Unexpected sports response from The Odds API")
 
@@ -58,27 +75,52 @@ class TheOddsApiProvider(OddsProvider):
 
     def fetch_odds(self, sport_key: str) -> list[ProviderEvent]:
         provider_sport_key = SPORT_KEY_ALIASES.get(sport_key, sport_key)
+        endpoint = f"/v4/sports/{provider_sport_key}/odds/"
+        regions = self.settings.odds_regions
+        markets = THE_ODDS_API_DEFAULT_MARKETS
         payload = self._get(
-            f"/v4/sports/{provider_sport_key}/odds/",
+            endpoint,
             params={
-                "regions": self.settings.odds_regions,
-                "markets": "h2h",
+                "regions": regions,
+                "markets": markets,
                 "oddsFormat": "decimal",
                 "dateFormat": "iso",
             },
+            endpoint=endpoint,
+            sport_key=provider_sport_key,
+            regions=regions,
+            markets=markets,
+            estimated_cost=estimate_request_cost(regions=regions, markets=markets),
         )
         if not isinstance(payload, list):
             raise OddsProviderError("Unexpected odds response from The Odds API")
 
         return [event for item in payload if isinstance(item, dict) for event in [self._parse_event(item)] if event]
 
-    def _get(self, path: str, params: dict[str, str]) -> Any:
+    def _get(
+        self,
+        path: str,
+        params: dict[str, str],
+        endpoint: str,
+        sport_key: str | None,
+        regions: str,
+        markets: str,
+        estimated_cost: int,
+    ) -> Any:
         if not self.settings.odds_api_key:
             raise OddsProviderConfigurationError("ODDS_API_KEY is not configured")
 
         request_params = {"apiKey": self.settings.odds_api_key, **params}
         try:
             response = self.client.get(path, params=request_params)
+            self._record_usage(
+                endpoint=endpoint,
+                sport_key=sport_key,
+                regions=regions,
+                markets=markets,
+                headers=response.headers,
+                estimated_cost=estimated_cost,
+            )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             response_text = redact_secrets(exc.response.text[:200])
@@ -89,6 +131,33 @@ class TheOddsApiProvider(OddsProvider):
             raise OddsProviderError(f"Failed to call The Odds API: {redact_secrets(exc)}") from exc
 
         return response.json()
+
+    def _record_usage(
+        self,
+        endpoint: str,
+        sport_key: str | None,
+        regions: str,
+        markets: str,
+        headers: httpx.Headers,
+        estimated_cost: int,
+    ) -> None:
+        if self.usage_callback is None:
+            return
+
+        self.usage_callback(
+            ProviderApiUsage(
+                provider=self.provider_name,
+                endpoint=endpoint,
+                sport_key=sport_key,
+                regions=regions,
+                markets=markets,
+                requests_remaining=parse_header_int(headers.get("x-requests-remaining")),
+                requests_used=parse_header_int(headers.get("x-requests-used")),
+                requests_last=parse_header_int(headers.get("x-requests-last")),
+                estimated_cost=estimated_cost,
+                captured_at=datetime.now(timezone.utc),
+            )
+        )
 
     def _parse_event(self, item: dict[str, Any]) -> ProviderEvent | None:
         external_id = str(item.get("id") or "").strip()
@@ -209,3 +278,20 @@ class TheOddsApiProvider(OddsProvider):
         if isinstance(value, str):
             return value.lower() in {"1", "true", "yes"}
         return bool(value)
+
+
+def parse_header_int(value: str | None) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def estimate_request_cost(regions: str, markets: str) -> int:
+    region_count = len([region.strip() for region in regions.split(",") if region.strip()])
+    market_count = len([market.strip() for market in markets.split(",") if market.strip()])
+    if region_count == 0 or market_count == 0:
+        return 0
+    return region_count * market_count

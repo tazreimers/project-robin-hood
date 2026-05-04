@@ -8,9 +8,10 @@ Base URL in local development: `http://localhost:8000`.
 
 ## Scan Runs and Jobs
 
-- `POST /scan`: Creates a scan run and queues the full scan workflow.
+- `POST /scan`: Checks the quota guard, then creates a scan run and queues the full scan workflow. If blocked, returns a scan run with `status: "blocked"` and the reason in `error_message`.
 - `GET /scan-runs`: Lists scan runs newest first.
 - `GET /scan-runs/{scan_run_id}`: Returns one scan run.
+- `GET /api-usage`: Returns latest remaining quota, used quota, last request cost, estimated scans remaining, and recent usage logs.
 - `POST /jobs/fetch-odds`: Queues odds fetching.
 - `POST /jobs/detect-arbitrage`: Queues arbitrage detection.
 - `GET /jobs/{task_id}`: Returns Celery job state and result/error details.

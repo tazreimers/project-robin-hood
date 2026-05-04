@@ -11,6 +11,7 @@ from app.models import Bookmaker, Event, Market, OddsSnapshot, Outcome, Sport
 from app.services.normalization import NormalizationService, NormalizedEvent, provider_key
 from app.providers import OddsProvider, ProviderBookmaker, ProviderEvent, ProviderMarket, ProviderSport
 from app.providers.the_odds_api import TheOddsApiProvider
+from app.services.quota_guard import QuotaGuard
 
 DECIMAL_ODDS_PRECISION = Decimal("0.0001")
 LINE_PRECISION = Decimal("0.0001")
@@ -45,9 +46,16 @@ class IngestionSummary:
 
 
 class OddsIngestionService:
-    def __init__(self, db: Session, provider: OddsProvider | None = None) -> None:
+    def __init__(
+        self,
+        db: Session,
+        provider: OddsProvider | None = None,
+        quota_guard: QuotaGuard | None = None,
+    ) -> None:
         self.db = db
-        self.provider = provider or TheOddsApiProvider()
+        self.provider = provider or TheOddsApiProvider(
+            usage_callback=quota_guard.log_api_response if quota_guard else None,
+        )
         self.provider_name = provider_key(self.provider)
         self.normalizer = NormalizationService(db)
 

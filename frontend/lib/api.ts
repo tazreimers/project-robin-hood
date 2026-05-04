@@ -1,5 +1,6 @@
 import type {
   ActiveArbitrageOpportunity,
+  ApiUsage,
   BetRecord,
   BetRecordPayload,
   DashboardMetrics,
@@ -12,6 +13,8 @@ import type {
 export type {
   ActiveArbitrageLeg,
   ActiveArbitrageOpportunity,
+  ApiUsage,
+  ApiUsageLog,
   BetRecord,
   BetRecordPayload,
   BookmakerPairMetric,
@@ -57,6 +60,10 @@ export function getScanRun(scanId: number) {
 
 export function getDashboardMetrics() {
   return fetchJson<DashboardMetrics>("/dashboard/metrics");
+}
+
+export function getApiUsage() {
+  return fetchJson<ApiUsage>("/api-usage");
 }
 
 export function getActiveOpportunities(includeStale = false) {

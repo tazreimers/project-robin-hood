@@ -1,5 +1,6 @@
 from app.db.base import Base
 from app.models.odds import (
+    ApiUsageLog,
     ArbitrageLeg,
     ArbitrageOpportunity,
     BetRecord,
@@ -16,6 +17,7 @@ from app.models.odds import (
 )
 
 __all__ = [
+    "ApiUsageLog",
     "ArbitrageLeg",
     "ArbitrageOpportunity",
     "Base",

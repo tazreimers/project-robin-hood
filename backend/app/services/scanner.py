@@ -10,6 +10,7 @@ from app.models import ScanRun
 from app.services.arbitrage import ArbitrageDetectionService
 from app.services.odds_ingestion import OddsIngestionService
 from app.providers import OddsProvider
+from app.services.quota_guard import QuotaGuard
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,23 @@ class ScannerService:
         self.db.flush()
         return scan_run
 
+    def create_blocked_scan_run(self, reason: str, now: datetime | None = None) -> ScanRun:
+        captured_at = ensure_aware(now or datetime.now(timezone.utc))
+        scan_run = ScanRun(
+            status="blocked",
+            sports_scanned=0,
+            events_processed=0,
+            markets_processed=0,
+            snapshots_saved=0,
+            opportunities_found=0,
+            error_message=reason[:1000],
+            started_at=captured_at,
+            completed_at=captured_at,
+        )
+        self.db.add(scan_run)
+        self.db.flush()
+        return scan_run
+
     def mark_running(self, scan_run_id: int, now: datetime | None = None) -> ScanRun:
         scan_run = self.get_scan_run(scan_run_id)
         scan_run.status = "running"
@@ -80,7 +98,16 @@ class ScannerService:
         if not sport_keys:
             raise ValueError("SPORT_KEYS is not configured")
 
-        ingestion = OddsIngestionService(self.db, provider=self.provider).ingest_configured_sports(sport_keys)
+        quota_guard = QuotaGuard(self.db, settings=self.settings)
+        quota_decision = quota_guard.check_scan_allowed(exclude_scan_run_id=scan_run_id)
+        if not quota_decision.allowed:
+            return self.mark_blocked(scan_run_id, quota_decision.reason or "Scan blocked by quota guard")
+
+        ingestion = OddsIngestionService(
+            self.db,
+            provider=self.provider,
+            quota_guard=quota_guard,
+        ).ingest_configured_sports(sport_keys)
         detection = ArbitrageDetectionService(self.db, settings=self.settings).detect()
         completed_at = datetime.now(timezone.utc)
 
@@ -94,6 +121,14 @@ class ScannerService:
         scan_run.completed_at = completed_at
         self.db.flush()
 
+        return self._summary_from_scan_run(scan_run)
+
+    def mark_blocked(self, scan_run_id: int, reason: str, now: datetime | None = None) -> ScanSummary:
+        scan_run = self.get_scan_run(scan_run_id)
+        scan_run.status = "blocked"
+        scan_run.error_message = reason[:1000]
+        scan_run.completed_at = ensure_aware(now or datetime.now(timezone.utc))
+        self.db.flush()
         return self._summary_from_scan_run(scan_run)
 
     def mark_failed(self, scan_run_id: int, error: Exception, now: datetime | None = None) -> ScanRun:

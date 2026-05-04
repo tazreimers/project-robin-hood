@@ -4,6 +4,7 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.jobs.celery_app import celery_app
 from app.services.odds_ingestion import OddsIngestionService
+from app.services.quota_guard import QuotaGuard
 from app.providers import OddsProviderConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,12 @@ def fetch_odds() -> dict[str, object]:
 
     db = SessionLocal()
     try:
-        service = OddsIngestionService(db)
+        quota_guard = QuotaGuard(db, settings=settings)
+        quota_decision = quota_guard.check_scan_allowed()
+        if not quota_decision.allowed:
+            return {"status": "blocked", "reason": quota_decision.reason or "Scan blocked by quota guard"}
+
+        service = OddsIngestionService(db, quota_guard=quota_guard)
         summary = service.ingest_configured_sports(sport_keys)
         db.commit()
     except OddsProviderConfigurationError as exc:

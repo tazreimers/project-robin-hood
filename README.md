@@ -85,6 +85,10 @@ ODDS_REGIONS=au
 DEFAULT_TOTAL_STAKE=1000
 MIN_ARBITRAGE_MARGIN=0.01
 MAX_ODDS_AGE_SECONDS=60
+DAILY_QUOTA_BUDGET=500
+MIN_REQUESTS_REMAINING_BUFFER=20
+MAX_SCANS_PER_HOUR=12
+ENABLE_QUOTA_GUARD=true
 ```
 
 `ODDS_API_KEY` is optional for bootstrapping. Odds ingestion returns a skipped result when it is not configured.
@@ -175,6 +179,7 @@ POST /aliases/markets
 POST /scan
 GET /scan-runs
 GET /scan-runs/{id}
+GET /api-usage
 GET /opportunities
 GET /opportunities/active
 GET /opportunities/active?include_stale=true

@@ -122,6 +122,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
     try {
       const run = await startScan();
       setLatestScan(run);
+      if (run.status === "blocked") {
+        setScanRunning(false);
+        setSnackbar({
+          message: run.error_message ?? "Scan blocked by quota guard",
+          severity: "error",
+        });
+        window.dispatchEvent(new Event("scan-completed"));
+        return;
+      }
       await pollScanRun(run.scan_id);
     } catch (error) {
       setScanRunning(false);
