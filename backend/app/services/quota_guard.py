@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.core.constants import THE_ODDS_API_DEFAULT_MARKETS
 from app.models import ApiUsageLog, ScanRun
 from app.providers.base import ProviderApiUsage
 
@@ -87,11 +86,16 @@ class QuotaGuard:
     ) -> int:
         """Estimate provider credits for a scan before issuing API calls."""
         scan_sport_keys = sport_keys if sport_keys is not None else self.settings.sport_key_list
-        request_cost = estimate_request_cost(
+        featured_request_cost = estimate_request_cost(
             regions=regions if regions is not None else self.settings.odds_regions,
-            markets=markets if markets is not None else THE_ODDS_API_DEFAULT_MARKETS,
+            markets=markets if markets is not None else self.settings.odds_markets,
         )
-        return len(scan_sport_keys) * request_cost
+        event_market_request_cost = estimate_request_cost(
+            regions=regions if regions is not None else self.settings.odds_regions,
+            markets=self.settings.odds_event_markets,
+        )
+        event_market_cost = max(0, self.settings.odds_event_market_max_events) * event_market_request_cost
+        return len(scan_sport_keys) * (featured_request_cost + event_market_cost)
 
     def count_recent_scans(self, now: datetime, exclude_scan_run_id: int | None = None) -> int:
         one_hour_ago = now - timedelta(hours=1)

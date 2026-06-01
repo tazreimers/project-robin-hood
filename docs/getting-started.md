@@ -35,6 +35,39 @@ Open:
 - Backend: `http://localhost:8000`
 - API docs: `http://localhost:8000/docs`
 
+## Configure Odds Markets
+
+Live scans are controlled from `.env`.
+
+Featured markets use The Odds API `/odds` endpoint:
+
+```bash
+ODDS_MARKETS=h2h
+```
+
+Valid featured market keys include `h2h`, `spreads`, `totals`, and `outrights`. Multiple values are comma-separated:
+
+```bash
+ODDS_MARKETS=h2h,totals
+```
+
+Player props and other non-featured markets use the event-odds endpoint, one event at a time:
+
+```bash
+ODDS_EVENT_MARKETS=player_disposals_over,player_goal_scorer_anytime
+ODDS_EVENT_MARKET_MAX_EVENTS=8
+```
+
+Set `ODDS_EVENT_MARKET_MAX_EVENTS=0` to disable event-level market calls without deleting the market list.
+
+After editing `.env`, restart the Docker Compose stack so the API and worker containers receive the new values.
+
+For AFL props, useful market keys include `player_disposals`, `player_disposals_over`, `player_goals_scored_over`, `player_marks_over`, `player_tackles_over`, `player_kicks_over`, `player_handballs_over`, and `player_goal_scorer_anytime`.
+
+Provider credit cost scales with sports, regions, markets, and event count. With `SPORT_KEYS=afl`, `ODDS_REGIONS=au`, `ODDS_MARKETS=h2h`, two event markets, and `ODDS_EVENT_MARKET_MAX_EVENTS=8`, the estimated cost is `1 + (8 * 2) = 17` credits per scan.
+
+Current arbitrage detection only creates opportunities from `h2h` snapshots. Additional markets are ingested so they can be reviewed and built on, but they are not yet used to create arbitrage opportunities.
+
 ## Seed Demo Data
 
 ```bash

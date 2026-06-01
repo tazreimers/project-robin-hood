@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     odds_api_key: str = ""
     sport_keys: str = ""
     odds_regions: str = "au"
+    odds_markets: str = "h2h"
+    odds_event_markets: str = ""
+    odds_event_market_max_events: int = 8
     default_total_stake: Decimal = Decimal("1000")
     min_arbitrage_margin: Decimal = Decimal("0.01")
     max_odds_age_seconds: int = 60
@@ -41,6 +44,14 @@ class Settings(BaseSettings):
     @property
     def sport_key_list(self) -> list[str]:
         return [key.strip() for key in self.sport_keys.split(",") if key.strip()]
+
+    @property
+    def odds_market_list(self) -> list[str]:
+        return [market.strip() for market in self.odds_markets.split(",") if market.strip()]
+
+    @property
+    def odds_event_market_list(self) -> list[str]:
+        return [market.strip() for market in self.odds_event_markets.split(",") if market.strip()]
 
 
 @lru_cache

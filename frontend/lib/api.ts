@@ -99,8 +99,15 @@ export function startAdaptiveScan() {
   return fetchJson<{ status: string; task_id: string }>("/jobs/adaptive-scan", { method: "POST" });
 }
 
-export function getActiveOpportunities(includeStale = false) {
-  const query = includeStale ? "?include_stale=true" : "";
+export function getActiveOpportunities(includeStale = false, includeInactive = false) {
+  const params = new URLSearchParams();
+  if (includeStale) {
+    params.set("include_stale", "true");
+  }
+  if (includeInactive) {
+    params.set("include_inactive", "true");
+  }
+  const query = params.toString() ? `?${params.toString()}` : "";
   return fetchJson<ActiveArbitrageOpportunity[]>(`/opportunities/active${query}`);
 }
 

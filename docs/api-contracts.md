@@ -46,6 +46,7 @@ Example:
 - `GET /opportunities`: All opportunities with legs.
 - `GET /opportunities/active`: Open `FRESH` and `RISKY` opportunities.
 - `GET /opportunities/active?include_stale=true`: Includes stale opportunities.
+- `GET /opportunities/active?include_inactive=true`: Includes historical inactive opportunities for review.
 - `GET /opportunities/{opportunity_id}`: One opportunity.
 - `GET /opportunities/{opportunity_id}/instructions`: Manual instructions, quality check, and per-leg freshness.
 - `POST /opportunities/{opportunity_id}/mark-actioned`: Marks an opportunity manually actioned.

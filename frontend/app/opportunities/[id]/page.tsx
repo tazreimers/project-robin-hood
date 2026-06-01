@@ -199,6 +199,8 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   }
 
   const checklistComplete = checklistItems.every((item) => checked[item]);
+  const staleLegCount = instructions.legs.filter((leg) => leg.freshness_status !== "VERIFIED").length;
+  const qualityStatus = instructions.quality_check?.status ?? "RISKY";
 
   return (
     <Stack spacing={3}>
@@ -230,7 +232,25 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
         </CardContent>
       </Card>
 
+      <Alert severity={staleLegCount > 0 || qualityStatus === "REJECTED" ? "warning" : "info"}>
+        {instructions.warning}
+        {staleLegCount > 0 ? ` ${staleLegCount} leg${staleLegCount === 1 ? "" : "s"} are stale.` : ""}
+      </Alert>
+
       {actionError ? <Alert severity="error">{actionError}</Alert> : null}
+
+      <Card sx={{ border: 1, borderColor: "divider" }}>
+        <CardContent>
+          <Stack spacing={1.25}>
+            <Typography variant="h6">Manual instructions</Typography>
+            {instructions.instructions.map((instruction) => (
+              <Typography key={instruction} color="text.secondary" variant="body2">
+                {instruction}
+              </Typography>
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
 
       <Card sx={{ border: 1, borderColor: "divider" }}>
         <CardContent>
@@ -316,6 +336,12 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                   </Stack>
                   <Typography color="text.secondary" variant="body2">
                     Freshness: {leg.odds_age_seconds === null ? "unknown" : `${leg.odds_age_seconds}s old`}
+                  </Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    Source seen: {formatDateTime(leg.source_last_seen_at)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {leg.instruction}
                   </Typography>
                   <ExecutionLegFields draft={legDrafts[leg.id] ?? defaultLegDraft(leg)} legId={leg.id} onChange={updateLegDraft} />
                 </Stack>

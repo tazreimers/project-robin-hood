@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Bookmaker, Event, Market, OddsSnapshot, Outcome, Sport
 from app.services.normalization import NormalizationService, NormalizedEvent, provider_key
-from app.providers import OddsProvider, ProviderBookmaker, ProviderEvent, ProviderMarket, ProviderSport
+from app.providers import OddsProvider, ProviderBookmaker, ProviderEvent, ProviderMarket, ProviderOutcome, ProviderSport
 from app.providers.the_odds_api import TheOddsApiProvider
 from app.services.quota_guard import QuotaGuard
 
@@ -43,6 +43,13 @@ class IngestionSummary:
             "outcomes_saved": self.outcomes_saved,
             "snapshots_saved": self.snapshots_saved,
         }
+
+
+@dataclass(frozen=True)
+class NormalizedProviderOutcome:
+    name: str
+    decimal_odds: Decimal
+    line: Decimal | None
 
 
 class OddsIngestionService:
@@ -117,43 +124,37 @@ class OddsIngestionService:
                     if not self._should_store_market(provider_market, normalized_market.canonical_market_type):
                         continue
 
-                    valid_outcomes = [
-                        (
-                            self._normalize_outcome_name(
-                                normalized_event.sport_key,
-                                normalized_market.canonical_market_type,
-                                provider_outcome.name,
-                            ),
-                            decimal_odds,
-                        )
-                        for provider_outcome in provider_market.outcomes
-                        if not provider_outcome.is_suspended
-                        for decimal_odds in [normalize_decimal_odds(provider_outcome.decimal_odds)]
-                        if decimal_odds is not None
-                    ]
+                    valid_outcomes = self._valid_outcomes(
+                        normalized_event.sport_key,
+                        normalized_market.canonical_market_type,
+                        provider_market,
+                    )
                     if not valid_outcomes:
                         continue
 
-                    market = self._upsert_market(
-                        event,
-                        bookmaker,
-                        provider_market,
-                        provider_bookmaker,
-                        normalized_market.canonical_market_type,
-                        captured_at,
-                    )
-                    summary.markets_saved += 1
-
-                    for outcome_name, decimal_odds in valid_outcomes:
-                        self._upsert_outcome(market, outcome_name, decimal_odds)
+                    seen_market_lines: set[Decimal | None] = set()
+                    for outcome in valid_outcomes:
+                        market = self._upsert_market(
+                            event,
+                            bookmaker,
+                            provider_market,
+                            provider_bookmaker,
+                            normalized_market.canonical_market_type,
+                            outcome.line,
+                            captured_at,
+                        )
+                        if outcome.line not in seen_market_lines:
+                            summary.markets_saved += 1
+                            seen_market_lines.add(outcome.line)
+                        self._upsert_outcome(market, outcome.name, outcome.decimal_odds)
                         self.db.add(
                             OddsSnapshot(
                                 event_id=event.id,
                                 bookmaker_id=bookmaker.id,
                                 market_type=normalized_market.canonical_market_type,
-                                line=normalize_line(provider_market.line),
-                                outcome_name=outcome_name,
-                                decimal_odds=decimal_odds,
+                                line=outcome.line,
+                                outcome_name=outcome.name,
+                                decimal_odds=outcome.decimal_odds,
                                 captured_at=captured_at,
                             )
                         )
@@ -237,9 +238,9 @@ class OddsIngestionService:
         provider_market: ProviderMarket,
         provider_bookmaker: ProviderBookmaker,
         canonical_market_type: str,
+        line: Decimal | None,
         captured_at: datetime,
     ) -> Market:
-        line = normalize_line(provider_market.line)
         query = select(Market).where(
             Market.event_id == event.id,
             Market.bookmaker_id == bookmaker.id,
@@ -290,15 +291,54 @@ class OddsIngestionService:
 
         return outcome
 
-    def _normalize_outcome_name(self, sport_key: str, canonical_market_type: str, outcome_name: str) -> str:
+    def _valid_outcomes(
+        self,
+        sport_key: str,
+        canonical_market_type: str,
+        provider_market: ProviderMarket,
+    ) -> list[NormalizedProviderOutcome]:
+        valid_outcomes: list[NormalizedProviderOutcome] = []
+        for provider_outcome in provider_market.outcomes:
+            if provider_outcome.is_suspended:
+                continue
+
+            decimal_odds = normalize_decimal_odds(provider_outcome.decimal_odds)
+            if decimal_odds is None:
+                continue
+
+            line = normalize_line(provider_outcome.line if provider_outcome.line is not None else provider_market.line)
+            valid_outcomes.append(
+                NormalizedProviderOutcome(
+                    name=self._normalize_outcome_name(
+                        sport_key,
+                        canonical_market_type,
+                        provider_outcome,
+                    ),
+                    decimal_odds=decimal_odds,
+                    line=line,
+                )
+            )
+
+        return valid_outcomes
+
+    def _normalize_outcome_name(
+        self,
+        sport_key: str,
+        canonical_market_type: str,
+        provider_outcome: ProviderOutcome,
+    ) -> str:
         if canonical_market_type == "h2h":
-            return self.normalizer.normalize_team_name(sport_key, outcome_name).canonical_name
-        return outcome_name.strip()
+            return self.normalizer.normalize_team_name(sport_key, provider_outcome.name).canonical_name
+
+        name = provider_outcome.name.strip()
+        if provider_outcome.description:
+            return f"{provider_outcome.description.strip()} - {name}"
+        return name
 
     @staticmethod
     def _should_store_market(provider_market: ProviderMarket, canonical_market_type: str) -> bool:
         return (
-            canonical_market_type == "h2h"
+            bool(canonical_market_type)
             and not provider_market.is_live
             and not provider_market.is_suspended
             and len(provider_market.outcomes) > 0

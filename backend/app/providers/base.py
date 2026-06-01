@@ -39,6 +39,8 @@ class ProviderSport:
 class ProviderOutcome:
     name: str
     decimal_odds: Decimal
+    description: str | None = None
+    line: Decimal | None = None
     is_suspended: bool = False
 
 

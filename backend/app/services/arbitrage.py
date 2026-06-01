@@ -10,6 +10,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.constants import ARBITRAGE_DETECTION_MARKETS
 from app.models import ArbitrageLeg, ArbitrageOpportunity, OddsSnapshot
 from app.services.market_quality import MarketQualityService
 from app.services.opportunity_validator import OpportunityValidator
@@ -160,6 +161,7 @@ class ArbitrageDetectionService:
             select(OddsSnapshot)
             .where(OddsSnapshot.captured_at >= cutoff)
             .where(OddsSnapshot.decimal_odds > Decimal("1"))
+            .where(OddsSnapshot.market_type.in_(ARBITRAGE_DETECTION_MARKETS))
             .order_by(OddsSnapshot.captured_at.desc(), OddsSnapshot.id.desc())
         )
         return list(self.db.scalars(query).all())
@@ -170,6 +172,7 @@ class ArbitrageDetectionService:
                 select(func.count(OddsSnapshot.id))
                 .where(OddsSnapshot.captured_at < cutoff)
                 .where(OddsSnapshot.decimal_odds > Decimal("1"))
+                .where(OddsSnapshot.market_type.in_(ARBITRAGE_DETECTION_MARKETS))
             )
             or 0
         )

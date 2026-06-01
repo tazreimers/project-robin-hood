@@ -172,8 +172,11 @@ export type OpportunityValidationReasons = {
 export type ActiveArbitrageOpportunity = {
   id: number;
   event: EventRead;
+  status: string;
   market_type: string;
   line: string | null;
+  implied_probability_total: string;
+  total_stake: string;
   margin: string;
   guaranteed_profit: string;
   guaranteed_return: string;

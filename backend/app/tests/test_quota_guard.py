@@ -129,6 +129,18 @@ class QuotaGuardTest(unittest.TestCase):
             8,
         )
 
+    def test_estimated_cost_includes_event_market_limit(self) -> None:
+        settings = Settings(
+            sport_keys="afl,nrl",
+            odds_regions="au",
+            odds_markets="h2h",
+            odds_event_markets="player_disposals_over,player_goal_scorer_anytime",
+            odds_event_market_max_events=3,
+        )
+        guard = QuotaGuard(self.db, settings=settings)
+
+        self.assertEqual(guard.estimate_scan_cost(), 14)
+
 
 if __name__ == "__main__":
     unittest.main()

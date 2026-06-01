@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models import Base, Event, MarketAlias, OddsSnapshot, TeamAlias
+from app.models import Base, Event, Market, MarketAlias, OddsSnapshot, TeamAlias
 from app.services.normalization import NormalizationService
 from app.services.odds_ingestion import OddsIngestionService
 from app.providers import (
@@ -82,6 +82,48 @@ class DifferentlyNamedEventProvider(OddsProvider):
         ]
 
 
+class PlayerPropProvider(OddsProvider):
+    provider_name = "test_provider"
+
+    def __init__(self, start_time: datetime) -> None:
+        self.start_time = start_time
+
+    def fetch_sports(self) -> list[ProviderSport]:
+        return [ProviderSport(key="aussierules_afl", name="AFL", is_active=True)]
+
+    def fetch_odds(self, sport_key: str) -> list[ProviderEvent]:
+        return [
+            ProviderEvent(
+                external_id="provider-prop-event",
+                sport_key="aussierules_afl",
+                sport_name="AFL",
+                home_team="Collingwood",
+                away_team="Sydney",
+                start_time=self.start_time,
+                bookmakers=[
+                    ProviderBookmaker(
+                        key="bookmaker_a",
+                        name="Bookmaker A",
+                        region="au",
+                        markets=[
+                            ProviderMarket(
+                                market_type="player_disposals_over",
+                                outcomes=[
+                                    ProviderOutcome(
+                                        name="Over",
+                                        description="Nick Daicos",
+                                        line=Decimal("24.5"),
+                                        decimal_odds=Decimal("1.87"),
+                                    ),
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            )
+        ]
+
+
 class NormalizationServiceTest(unittest.TestCase):
     def setUp(self) -> None:
         self.engine = create_engine("sqlite+pysqlite:///:memory:")
@@ -128,6 +170,25 @@ class NormalizationServiceTest(unittest.TestCase):
         self.assertEqual(events[0].normalized_event_key, "aussierules_afl:%s:collingwood:sydney" % self.start_time.date())
         self.assertEqual({snapshot.market_type for snapshot in snapshots}, {"h2h"})
         self.assertEqual({snapshot.outcome_name for snapshot in snapshots}, {"Collingwood", "Sydney"})
+
+    def test_player_prop_outcomes_keep_player_and_line_context(self) -> None:
+        provider = PlayerPropProvider(self.start_time)
+        service = OddsIngestionService(self.db, provider=provider)
+
+        summary = service.ingest_sport_odds("aussierules_afl")
+        self.db.commit()
+
+        market = self.db.scalar(select(Market))
+        snapshot = self.db.scalar(select(OddsSnapshot))
+        self.assertIsNotNone(market)
+        self.assertIsNotNone(snapshot)
+        self.assertEqual(summary.markets_saved, 1)
+        self.assertEqual(summary.snapshots_saved, 1)
+        self.assertEqual(market.market_type, "player_disposals_over")
+        self.assertEqual(market.line, Decimal("24.5000"))
+        self.assertEqual(snapshot.market_type, "player_disposals_over")
+        self.assertEqual(snapshot.line, Decimal("24.5000"))
+        self.assertEqual(snapshot.outcome_name, "Nick Daicos - Over")
 
     def test_event_match_confidence_for_different_aliases(self) -> None:
         first = ProviderEvent(

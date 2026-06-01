@@ -8,7 +8,6 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings, get_settings
-from app.core.constants import THE_ODDS_API_DEFAULT_MARKETS
 from app.core.logging import redact_secrets
 from app.providers.base import (
     OddsProvider,
@@ -74,11 +73,22 @@ class TheOddsApiProvider(OddsProvider):
         return sports
 
     def fetch_odds(self, sport_key: str) -> list[ProviderEvent]:
-        """Fetch decimal head-to-head odds for one configured sport key."""
+        """Fetch decimal odds for configured sport, featured markets, and event-level markets."""
         provider_sport_key = SPORT_KEY_ALIASES.get(sport_key, sport_key)
+        events: list[ProviderEvent] = []
+        featured_markets = ",".join(self.settings.odds_market_list)
+        if featured_markets:
+            events.extend(self._fetch_featured_odds(provider_sport_key, featured_markets))
+
+        event_markets = ",".join(self.settings.odds_event_market_list)
+        if event_markets:
+            events.extend(self._fetch_event_market_odds(provider_sport_key, event_markets))
+
+        return merge_events(events)
+
+    def _fetch_featured_odds(self, provider_sport_key: str, markets: str) -> list[ProviderEvent]:
         endpoint = f"/v4/sports/{provider_sport_key}/odds/"
         regions = self.settings.odds_regions
-        markets = THE_ODDS_API_DEFAULT_MARKETS
         payload = self._get(
             endpoint,
             params={
@@ -97,6 +107,60 @@ class TheOddsApiProvider(OddsProvider):
             raise OddsProviderError("Unexpected odds response from The Odds API")
 
         return [event for item in payload if isinstance(item, dict) for event in [self._parse_event(item)] if event]
+
+    def _fetch_event_market_odds(self, provider_sport_key: str, markets: str) -> list[ProviderEvent]:
+        endpoint = f"/v4/sports/{provider_sport_key}/events"
+        events_payload = self._get(
+            endpoint,
+            params={"dateFormat": "iso"},
+            endpoint=endpoint,
+            sport_key=provider_sport_key,
+            regions="",
+            markets="",
+            estimated_cost=0,
+        )
+        if not isinstance(events_payload, list):
+            raise OddsProviderError("Unexpected events response from The Odds API")
+
+        now = datetime.now(timezone.utc)
+        events = [
+            event
+            for item in events_payload
+            if isinstance(item, dict)
+            for event in [self._parse_event(item)]
+            if event and event.start_time > now
+        ]
+        events.sort(key=lambda event: event.start_time)
+        max_events = self.settings.odds_event_market_max_events
+        if max_events <= 0:
+            return []
+        events = events[:max_events]
+
+        regions = self.settings.odds_regions
+        responses: list[ProviderEvent] = []
+        for event in events:
+            event_endpoint = f"/v4/sports/{provider_sport_key}/events/{event.external_id}/odds"
+            payload = self._get(
+                event_endpoint,
+                params={
+                    "regions": regions,
+                    "markets": markets,
+                    "oddsFormat": "decimal",
+                    "dateFormat": "iso",
+                },
+                endpoint=event_endpoint,
+                sport_key=provider_sport_key,
+                regions=regions,
+                markets=markets,
+                estimated_cost=estimate_request_cost(regions=regions, markets=markets),
+            )
+            if not isinstance(payload, dict):
+                continue
+            parsed_event = self._parse_event(payload)
+            if parsed_event is not None:
+                responses.append(parsed_event)
+
+        return responses
 
     def _get(
         self,
@@ -216,7 +280,8 @@ class TheOddsApiProvider(OddsProvider):
 
     def _parse_market(self, item: dict[str, Any]) -> ProviderMarket | None:
         market_type = str(item.get("key") or "").strip()
-        if market_type != "h2h":
+        allowed_market_keys = {*self.settings.odds_market_list, *self.settings.odds_event_market_list}
+        if allowed_market_keys and market_type not in allowed_market_keys:
             return None
 
         outcomes = [
@@ -237,6 +302,8 @@ class TheOddsApiProvider(OddsProvider):
     def _parse_outcome(self, item: dict[str, Any]) -> ProviderOutcome | None:
         name = str(item.get("name") or "").strip()
         decimal_odds = self._parse_decimal(item.get("price"))
+        description = str(item.get("description") or "").strip() or None
+        line = self._parse_decimal(item.get("point"))
 
         if not name or decimal_odds is None:
             return None
@@ -244,6 +311,8 @@ class TheOddsApiProvider(OddsProvider):
         return ProviderOutcome(
             name=name,
             decimal_odds=decimal_odds,
+            description=description,
+            line=line,
             is_suspended=self._is_suspended(item),
         )
 
@@ -297,3 +366,44 @@ def estimate_request_cost(regions: str, markets: str) -> int:
     if region_count == 0 or market_count == 0:
         return 0
     return region_count * market_count
+
+
+def merge_events(events: list[ProviderEvent]) -> list[ProviderEvent]:
+    """Merge featured and event-level responses for the same provider event id."""
+    merged_by_id: dict[str, ProviderEvent] = {}
+    for event in events:
+        existing = merged_by_id.get(event.external_id)
+        if existing is None:
+            merged_by_id[event.external_id] = event
+            continue
+
+        merged_by_id[event.external_id] = ProviderEvent(
+            external_id=existing.external_id,
+            sport_key=existing.sport_key,
+            sport_name=existing.sport_name,
+            home_team=existing.home_team,
+            away_team=existing.away_team,
+            start_time=existing.start_time,
+            bookmakers=merge_bookmakers([*existing.bookmakers, *event.bookmakers]),
+        )
+
+    return list(merged_by_id.values())
+
+
+def merge_bookmakers(bookmakers: list[ProviderBookmaker]) -> list[ProviderBookmaker]:
+    merged_by_key: dict[str, ProviderBookmaker] = {}
+    for bookmaker in bookmakers:
+        existing = merged_by_key.get(bookmaker.key)
+        if existing is None:
+            merged_by_key[bookmaker.key] = bookmaker
+            continue
+
+        merged_by_key[bookmaker.key] = ProviderBookmaker(
+            key=existing.key,
+            name=existing.name,
+            region=existing.region,
+            markets=[*existing.markets, *bookmaker.markets],
+            last_update=bookmaker.last_update or existing.last_update,
+        )
+
+    return list(merged_by_key.values())

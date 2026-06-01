@@ -2,7 +2,7 @@
 
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { Box, Button, Chip, FormControlLabel, LinearProgress, Paper, Snackbar, Stack, Switch, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, FormControlLabel, LinearProgress, Paper, Snackbar, Stack, Switch, Tooltip, Typography } from "@mui/material";
 import { DataGrid, type GridColDef, type GridRenderCellParams, type GridRowClassNameParams, type GridRowParams } from "@mui/x-data-grid";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +20,7 @@ export default function OpportunitiesPage() {
   const router = useRouter();
   const [opportunities, setOpportunities] = useState<ActiveArbitrageOpportunity[]>([]);
   const [includeStale, setIncludeStale] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [countdown, setCountdown] = useState(refreshSeconds);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function OpportunitiesPage() {
       setError(null);
 
       try {
-        const data = await getActiveOpportunities(includeStale);
+        const data = await getActiveOpportunities(includeStale || includeInactive, includeInactive);
         const nextIds = new Set(data.map((opportunity) => opportunity.id));
         const newIds = data.map((opportunity) => opportunity.id).filter((id) => previousIds.current.size > 0 && !previousIds.current.has(id));
         previousIds.current = nextIds;
@@ -57,7 +58,7 @@ export default function OpportunitiesPage() {
         setRefreshing(false);
       }
     },
-    [includeStale]
+    [includeInactive, includeStale]
   );
 
   useEffect(() => {
@@ -133,6 +134,14 @@ export default function OpportunitiesPage() {
         width: 120,
         renderCell: (params: GridRenderCellParams<ActiveArbitrageOpportunity, string>) => (
           <Chip size="small" label={params.row.market_type} variant="outlined" />
+        ),
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        width: 120,
+        renderCell: (params: GridRenderCellParams<ActiveArbitrageOpportunity, string>) => (
+          <Chip size="small" label={params.row.status} color={opportunityStatusColor(params.row.status)} variant={params.row.status === "open" ? "filled" : "outlined"} />
         ),
       },
       {
@@ -249,8 +258,10 @@ export default function OpportunitiesPage() {
         <PageHeader
           autoRefresh={autoRefresh}
           countdown={countdown}
+          includeInactive={includeInactive}
           includeStale={includeStale}
           onAutoRefreshChange={setAutoRefresh}
+          onIncludeInactiveChange={setIncludeInactive}
           onIncludeStaleChange={setIncludeStale}
         />
         <Paper sx={{ p: 2 }}>
@@ -265,12 +276,31 @@ export default function OpportunitiesPage() {
       <PageHeader
         autoRefresh={autoRefresh}
         countdown={countdown}
+        includeInactive={includeInactive}
         includeStale={includeStale}
         onAutoRefreshChange={setAutoRefresh}
+        onIncludeInactiveChange={setIncludeInactive}
         onIncludeStaleChange={setIncludeStale}
       />
 
       {error ? <ErrorState message={error} onRetry={() => void loadOpportunities(true)} /> : null}
+      {includeInactive ? (
+        <Alert severity="warning">
+          Showing historical opportunities. Expired or stale records are for review only; run a fresh scan and verify every leg manually before taking any action.
+        </Alert>
+      ) : null}
+      {!loading && !error && opportunities.length === 0 && !includeInactive ? (
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={() => setIncludeInactive(true)}>
+              Show history
+            </Button>
+          }
+        >
+          No open fresh or risky opportunities are available. Dashboard totals can include expired historical opportunities.
+        </Alert>
+      ) : null}
 
       <Paper sx={{ overflow: "hidden", border: 1, borderColor: "divider" }}>
         {refreshing ? <LinearProgress /> : null}
@@ -288,7 +318,21 @@ export default function OpportunitiesPage() {
           getRowClassName={(params: GridRowClassNameParams<ActiveArbitrageOpportunity>) => (updatedIds.has(Number(params.id)) ? "updated-row" : "")}
           slots={{
             noRowsOverlay: () => (
-              <EmptyState title="No opportunities found yet" message="Run a scan to check the latest odds, or seed demo data for a local walkthrough." />
+              <EmptyState
+                title={includeInactive ? "No opportunities recorded" : "No active opportunities"}
+                message={
+                  includeInactive
+                    ? "Run a scan to check the latest odds, or seed demo data for a local walkthrough."
+                    : "Run a fresh scan for current odds, or show history to inspect expired opportunities."
+                }
+                action={
+                  includeInactive ? undefined : (
+                    <Button variant="outlined" onClick={() => setIncludeInactive(true)}>
+                      Show History
+                    </Button>
+                  )
+                }
+              />
             ),
           }}
           localeText={{ noRowsLabel: "No arbitrage opportunities found" }}
@@ -326,14 +370,18 @@ export default function OpportunitiesPage() {
 function PageHeader({
   autoRefresh,
   countdown,
+  includeInactive,
   includeStale,
   onAutoRefreshChange,
+  onIncludeInactiveChange,
   onIncludeStaleChange,
 }: {
   autoRefresh: boolean;
   countdown: number;
+  includeInactive: boolean;
   includeStale: boolean;
   onAutoRefreshChange: (value: boolean) => void;
+  onIncludeInactiveChange: (value: boolean) => void;
   onIncludeStaleChange: (value: boolean) => void;
 }) {
   return (
@@ -341,12 +389,16 @@ function PageHeader({
       <Box>
         <Typography variant="h5">Opportunities</Typography>
         <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-          Active arbitrage board for manual review and execution.
+          Current arbitrage board for manual review and execution.
         </Typography>
       </Box>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" } }}>
         <Chip size="small" color={autoRefresh ? "primary" : "default"} label={`Refresh in ${countdown}s`} />
         <FormControlLabel control={<Switch checked={includeStale} onChange={(event) => onIncludeStaleChange(event.target.checked)} />} label="Include stale" />
+        <FormControlLabel
+          control={<Switch checked={includeInactive} onChange={(event) => onIncludeInactiveChange(event.target.checked)} />}
+          label="Show history"
+        />
         <FormControlLabel
           control={<Switch checked={autoRefresh} onChange={(event) => onAutoRefreshChange(event.target.checked)} />}
           label="Auto-refresh (30s)"
@@ -374,6 +426,19 @@ function freshnessColor(status: ActiveArbitrageOpportunity["validation_status"])
     return "warning.main";
   }
   return "text.disabled";
+}
+
+function opportunityStatusColor(status: string): "success" | "warning" | "default" | "info" {
+  if (status === "open") {
+    return "success";
+  }
+  if (status === "expired") {
+    return "warning";
+  }
+  if (status === "ACTIONED") {
+    return "info";
+  }
+  return "default";
 }
 
 function validationTooltip(opportunity: ActiveArbitrageOpportunity) {

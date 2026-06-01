@@ -211,6 +211,7 @@ class ActiveArbitrageLegRead(BaseModel):
 class ActiveArbitrageOpportunityRead(BaseModel):
     id: int
     event: EventRead
+    status: str
     market_type: str
     line: Decimal | None
     implied_probability_total: Decimal

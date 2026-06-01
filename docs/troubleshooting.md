@@ -56,4 +56,9 @@ This can be normal. Try:
 - Include stale opportunities in the UI.
 - Check scan runs for errors.
 - Verify configured sports and regions.
+- Verify `ODDS_MARKETS`; current opportunity detection only supports `h2h`.
 - Confirm odds snapshots are fresh.
+
+## Player Props Do Not Create Opportunities
+
+`ODDS_EVENT_MARKETS` fetches and stores event-level markets such as AFL player props. Current arbitrage detection only creates opportunities from `h2h` snapshots, so player props can increase scan counts and quota usage without producing opportunities yet.

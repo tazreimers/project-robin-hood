@@ -78,6 +78,7 @@ from app.services.execution import ExecutionNotFoundError, ExecutionValidationEr
 from app.services.health import get_health
 from app.services.normalization import canonical_sport_key, cleanup_key
 from app.services.opportunity_validator import (
+    EXPIRED,
     FRESH,
     RISKY,
     STALE,
@@ -249,6 +250,7 @@ def list_opportunities(db: Session = Depends(get_db)) -> list[ArbitrageOpportuni
 @router.get("/opportunities/active", response_model=list[ActiveArbitrageOpportunityRead])
 def list_active_opportunities(
     include_stale: bool = False,
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
 ) -> list[ActiveArbitrageOpportunityRead]:
     settings = get_settings()
@@ -259,13 +261,16 @@ def list_active_opportunities(
             selectinload(ArbitrageOpportunity.event),
             selectinload(ArbitrageOpportunity.legs).selectinload(ArbitrageLeg.bookmaker),
         )
-        .where(ArbitrageOpportunity.status == "open")
         .order_by(ArbitrageOpportunity.detected_at.desc())
     )
+    if not include_inactive:
+        query = query.where(ArbitrageOpportunity.status == "open")
 
     allowed_statuses = {FRESH, RISKY}
     if include_stale:
         allowed_statuses.add(STALE)
+    if include_inactive:
+        allowed_statuses.update({STALE, EXPIRED})
 
     validator = OpportunityValidator(db, settings=settings)
     responses: list[ActiveArbitrageOpportunityRead] = []
@@ -702,6 +707,7 @@ def build_active_opportunity_response(
     return ActiveArbitrageOpportunityRead(
         id=opportunity.id,
         event=EventRead.model_validate(opportunity.event),
+        status=opportunity.status,
         market_type=opportunity.market_type,
         line=opportunity.line,
         implied_probability_total=opportunity.implied_probability_total,

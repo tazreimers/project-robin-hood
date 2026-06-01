@@ -123,6 +123,22 @@ class OpportunityValidatorTest(unittest.TestCase):
         self.assertEqual([opportunity.id for opportunity in default_response], [fresh.id])
         self.assertEqual({opportunity.validation_status for opportunity in include_stale_response}, {FRESH, STALE})
 
+    def test_active_opportunities_can_include_inactive_history(self) -> None:
+        now = datetime.now(timezone.utc)
+        fresh = self.create_opportunity(event_start_time=now + timedelta(days=1))
+        expired = self.create_opportunity(external_id="event-2", event_start_time=now + timedelta(days=1))
+        expired.status = "expired"
+        self.add_leg_snapshots(fresh, captured_at=now)
+        self.add_leg_snapshots(expired, captured_at=now)
+        self.db.commit()
+
+        default_response = list_active_opportunities(db=self.db)
+        history_response = list_active_opportunities(include_inactive=True, db=self.db)
+
+        self.assertEqual([opportunity.id for opportunity in default_response], [fresh.id])
+        self.assertEqual({opportunity.id for opportunity in history_response}, {fresh.id, expired.id})
+        self.assertEqual({opportunity.status for opportunity in history_response}, {"open", "expired"})
+
     def validate(self, opportunity: ArbitrageOpportunity):
         return OpportunityValidator(self.db, settings=self.settings).validate_and_apply(opportunity, now=self.now)
 
